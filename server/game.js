@@ -4,7 +4,7 @@
 // (local SQLite or Cloudflare D1).
 import { DRILLS, DRILL_BY_ID, MAX_LEVEL, parSeconds } from '../shared/drills.js';
 import { scoreAttempt, qualifiesForLevel, SOLVES_TO_LEVEL, BULB_CLOVES, BULB_BONUS, PB_BONUS_SHARE, bulbStreak, rankFor, masteryStars, addDays } from '../shared/scoring.js';
-import { cloveValue, startingLevel } from '../shared/cloves.js';
+import { cloveValue, startingLevel, LESSON_CLOVES_PER_DAY } from '../shared/cloves.js';
 import { ACHIEVEMENTS, newlyUnlocked } from '../shared/achievements.js';
 import { GRADES } from '../shared/grading.js';
 
@@ -128,7 +128,9 @@ export async function recordAttempt(store, user, body) {
     userMoves,
     wastePlies: int(body.wastePlies, 0, 2000),
     hints: int(body.hints, 0, 100),
+    writtenHints: int(body.writtenHints, 0, 100),
     takebacks: int(body.takebacks, 0, 100),
+    lessonReplay: !!body.lessonReplay,
     onlyMoves: int(body.onlyMoves, 0, 100),
     parSeconds: par,
   };
@@ -137,8 +139,9 @@ export async function recordAttempt(store, user, body) {
   let points = score.total;
 
   // Personal best: fastest seconds-per-move on this drill (after 3 solves).
+  // A replay right after a lesson doesn't count: the answer was just shown.
   let pb = false;
-  if (success && userMoves > 0) {
+  if (success && userMoves > 0 && !attempt.lessonReplay) {
     const prev = await store.get(
       'SELECT COUNT(*) n, MIN(duration_ms * 1.0 / MAX(user_moves,1)) best FROM attempts WHERE user_id = ? AND drill_id = ? AND success = 1',
       user.id,
@@ -154,7 +157,7 @@ export async function recordAttempt(store, user, body) {
   }
 
   // Level progression (only when playing at your current level).
-  const qualifies = qualifiesForLevel({ ...attempt, efficiency: score.efficiency }, level) && level === progressRow.level;
+  const qualifies = !attempt.lessonReplay && qualifiesForLevel({ ...attempt, efficiency: score.efficiency }, level) && level === progressRow.level;
   let newLevel = progressRow.level;
   let qualifying = progressRow.qualifying;
   let levelUp = false;
@@ -170,7 +173,19 @@ export async function recordAttempt(store, user, body) {
 
   // Garlick bulb: a solve fills part of a clove, depending on how hard the
   // drill is for this player (see shared/cloves.js).
-  const cloveGain = success ? cloveValue({ drill, level, rating: user.rating, hints: attempt.hints, takebacks: attempt.takebacks }) : 0;
+  let cloveGain = success ? cloveValue({ drill, level, rating: user.rating, hints: attempt.hints, takebacks: attempt.takebacks, lessonReplay: attempt.lessonReplay }) : 0;
+  let lessonCloveCapped = false;
+  if (cloveGain > 0 && attempt.lessonReplay) {
+    const used = await store.get(
+      'SELECT COUNT(*) n FROM attempts WHERE user_id = ? AND day = ? AND lesson_replay = 1 AND clove_gain > 0',
+      user.id,
+      day,
+    );
+    if (used.n >= LESSON_CLOVES_PER_DAY) {
+      cloveGain = 0;
+      lessonCloveCapped = true;
+    }
+  }
   const dayRow = (await store.get('SELECT cloves, bulb_done, bonus FROM days WHERE user_id = ? AND day = ?', user.id, day)) ?? {
     cloves: 0,
     bulb_done: 0,
@@ -183,8 +198,8 @@ export async function recordAttempt(store, user, body) {
   const writes = [
     [
       `INSERT INTO attempts (user_id, drill_id, level, fen, success, reason, duration_ms, user_moves, waste_plies, efficiency, grades,
-         hints, takebacks, only_moves, par_seconds, speed_factor, perfect, points, clove_gain, breakdown, day, created_at)
-       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+         hints, takebacks, only_moves, par_seconds, speed_factor, perfect, points, clove_gain, written_hints, lesson_replay, breakdown, day, created_at)
+       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
       [
         user.id,
         drill.id,
@@ -205,6 +220,8 @@ export async function recordAttempt(store, user, body) {
         score.perfect ? 1 : 0,
         points,
         cloveGain,
+        attempt.writtenHints,
+        attempt.lessonReplay ? 1 : 0,
         JSON.stringify(breakdown),
         day,
         Date.now(),
@@ -243,6 +260,8 @@ export async function recordAttempt(store, user, body) {
     parSeconds: par,
     personalBest: pb,
     cloveGain,
+    lessonReplay: attempt.lessonReplay,
+    lessonCloveCapped,
     progress: { level: newLevel, qualifying, levelUp, needed: SOLVES_TO_LEVEL, qualified: qualifies },
     day: { ...(await getDay(store, user.id, day)), bulbCompletedNow, bulbBonus: bulbCompletedNow ? BULB_BONUS : 0 },
     newAchievements: unlocked.map((id) => publicAchievement(ACHIEVEMENTS.find((a) => a.id === id))),

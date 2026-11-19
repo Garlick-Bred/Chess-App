@@ -22,6 +22,9 @@ describe('clove values', () => {
   it('halves the value when hints or takebacks were used', () => {
     expect(cloveValue({ drill: lucena, level: 1, rating: 1300, hints: 1 })).toBe(0.5);
   });
+  it('a lesson replay is worth a full clove, even for a warm-up', () => {
+    expect(cloveValue({ drill: krrk, level: 1, rating: 1300, lessonReplay: true })).toBe(1);
+  });
   it('starts warm-ups at level 3 and easy drills at level 2', () => {
     expect(startingLevel(krrk, 1300)).toBe(3);
     expect(startingLevel(krk, 1100)).toBe(2);

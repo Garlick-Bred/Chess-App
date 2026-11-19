@@ -1851,3 +1851,151 @@ button.card:hover {
 .clove-gain {
   color: var(--yellow);
 }
+
+/* ---------- premoves + lesson king box ---------- */
+.sq.premove::after,
+.sq.premove-sel::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: rgba(61, 155, 233, 0.55);
+}
+.sq.region::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: rgba(232, 95, 79, 0.3);
+  z-index: 1;
+  pointer-events: none;
+}
+.sq.dark.region::before {
+  background: rgba(200, 70, 60, 0.55);
+}
+.hint-box {
+  background: rgba(61, 155, 233, 0.12);
+  border: 1px solid rgba(61, 155, 233, 0.4);
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-size: 0.92rem;
+  line-height: 1.4;
+  animation: slideIn 0.25s ease-out;
+}
+.hint-box b {
+  color: #8cc8ff;
+  margin-right: 4px;
+}
+.premove-note {
+  color: #9ccff7;
+}
+.btn.lesson-btn {
+  background: #3d6fb6;
+  border-bottom-color: #274a7c;
+  color: #fff;
+  flex-direction: column;
+  gap: 2px;
+}
+.btn.lesson-btn small {
+  font-size: 0.75rem;
+  opacity: 0.85;
+}
+
+/* ---------- lessons ---------- */
+.lesson-explain {
+  background: rgba(0, 0, 0, 0.18);
+  border-radius: 8px;
+  padding: 10px 12px;
+  min-height: 86px;
+  animation: slideIn 0.25s ease-out;
+}
+.lesson-explain p {
+  margin: 6px 0 4px;
+  line-height: 1.45;
+}
+.who {
+  font-size: 0.72rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 2px 7px;
+  border-radius: 6px;
+}
+.who.you {
+  background: rgba(129, 182, 76, 0.25);
+  color: #b9e08f;
+}
+.who.opponent {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--muted);
+}
+.lesson-controls {
+  display: flex;
+  gap: 8px;
+}
+.lesson-controls .grow {
+  flex: 1;
+}
+.check-inline {
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+  cursor: pointer;
+}
+.lesson-done {
+  background: linear-gradient(180deg, rgba(129, 182, 76, 0.18), rgba(129, 182, 76, 0.06));
+  border: 1px solid rgba(129, 182, 76, 0.45);
+  border-radius: 10px;
+  padding: 12px;
+  animation: slideIn 0.3s ease-out;
+}
+.lesson-moves {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.lesson-move {
+  border: 0;
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text);
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 700;
+  border-radius: 6px;
+  padding: 3px 7px;
+  cursor: pointer;
+}
+.lesson-move.opponent {
+  color: var(--muted);
+  font-weight: 500;
+}
+.lesson-move.on {
+  background: var(--green);
+  color: #fff;
+}
+.lesson-move.on .move-n {
+  color: rgba(255, 255, 255, 0.75);
+}
+/* Phones: keep the step buttons and the explanation right under the board. */
+@media (max-width: 900px) {
+  .play.lesson .panel > * {
+    order: 4;
+  }
+  .play.lesson .lesson-controls {
+    order: 0;
+  }
+  .play.lesson .lesson-done {
+    order: 1;
+  }
+  .play.lesson .lesson-explain {
+    order: 2;
+  }
+  .play.lesson .panel-head {
+    order: 3;
+  }
+}
+
+.lesson-cta {
+  margin-top: auto;
+  color: var(--green-hi);
+  font-weight: 800;
+  font-size: 0.9rem;
+}

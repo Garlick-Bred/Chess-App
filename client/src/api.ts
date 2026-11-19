@@ -111,6 +111,8 @@ export interface AttemptResult {
   parSeconds: number;
   personalBest: boolean;
   cloveGain: number;
+  lessonReplay?: boolean;
+  lessonCloveCapped?: boolean;
   progress: { level: number; qualifying: number; levelUp: boolean; needed: number; qualified: boolean };
   day: DayInfo & { bulbCompletedNow: boolean; bulbBonus: number };
   newAchievements: { id: string; name: string; icon: string; desc: string }[];

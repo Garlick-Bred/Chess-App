@@ -40,6 +40,8 @@ export const SCHEMA = [
     perfect      INTEGER NOT NULL,
     points       INTEGER NOT NULL,
     clove_gain   REAL NOT NULL DEFAULT 0,
+    written_hints INTEGER NOT NULL DEFAULT 0,
+    lesson_replay INTEGER NOT NULL DEFAULT 0,
     breakdown    TEXT NOT NULL DEFAULT '[]',
     day          TEXT NOT NULL,
     created_at   INTEGER NOT NULL
@@ -77,20 +79,42 @@ export const SCHEMA = [
     count INTEGER NOT NULL,
     until INTEGER NOT NULL
   )`,
+  `CREATE TABLE IF NOT EXISTS meta (
+    key   TEXT PRIMARY KEY,
+    value TEXT NOT NULL
+  )`,
 ];
+
+/** Bump when SCHEMA or ADDED_COLUMNS change, so existing databases migrate. */
+export const SCHEMA_VERSION = 3;
 
 // Columns added after the first release; added to older databases on start.
 export const ADDED_COLUMNS = [
   ['users', 'rating', 'INTEGER'],
   ['users', 'rating_source', 'TEXT'],
   ['attempts', 'clove_gain', 'REAL NOT NULL DEFAULT 0'],
+  ['attempts', 'written_hints', 'INTEGER NOT NULL DEFAULT 0'],
+  ['attempts', 'lesson_replay', 'INTEGER NOT NULL DEFAULT 0'],
 ];
 
-/** Create tables and add any missing columns. Safe to run on every start. */
+/**
+ * Create tables and add any missing columns. Costs a single query when the
+ * database is already up to date (it runs on every cold start of a Worker).
+ */
 export async function ensureSchema(store) {
+  try {
+    const row = await store.get("SELECT value FROM meta WHERE key = 'schema_version'");
+    if (row && Number(row.value) >= SCHEMA_VERSION) return;
+  } catch {
+    // meta table missing: older or empty database
+  }
   await store.batch(SCHEMA.map((sql) => [sql, []]));
   for (const [table, column, type] of ADDED_COLUMNS) {
     const cols = await store.all(`PRAGMA table_info(${table})`);
     if (!cols.some((c) => c.name === column)) await store.run(`ALTER TABLE ${table} ADD COLUMN ${column} ${type}`);
   }
+  await store.run(
+    "INSERT INTO meta (key, value) VALUES ('schema_version', ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value",
+    String(SCHEMA_VERSION),
+  );
 }

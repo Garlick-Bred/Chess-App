@@ -71,6 +71,25 @@ describe('attempts', () => {
     await expect(recordAttempt(store, user, solve({ userMoves: 0 }))).rejects.toThrow();
     expect((await recordAttempt(store, user, solve({ level: 5 }))).progress.level).toBe(1);
   });
+  it('lesson replays earn a full clove at most twice a day and never count toward levels', async () => {
+    const { store, user } = await setup(1300); // ladder mate is a warm-up at 1300
+    const replay = solve({ drillId: 'krrk', level: 3, userMoves: 3, mateIn: 3, lessonReplay: true });
+    const a = await recordAttempt(store, user, replay);
+    const b = await recordAttempt(store, user, replay);
+    const c = await recordAttempt(store, user, replay);
+    expect([a.cloveGain, b.cloveGain, c.cloveGain]).toEqual([1, 1, 0]);
+    expect(c.lessonCloveCapped).toBe(true);
+    expect(c.day.cloves).toBe(2);
+    expect(a.progress.qualified).toBe(false);
+    expect(a.breakdown.some((x) => x.label.startsWith('Replay after lesson'))).toBe(true);
+  });
+  it('stores written hints without halving the clove', async () => {
+    const { store, user } = await setup(800);
+    const r = await recordAttempt(store, user, solve({ writtenHints: 1 }));
+    expect(r.cloveGain).toBe(1);
+    const row = await store.get('SELECT written_hints FROM attempts WHERE id = (SELECT MAX(id) FROM attempts)');
+    expect(row.written_hints).toBe(1);
+  });
   it('unlocks achievements', async () => {
     const { store, user } = await setup();
     const r = await recordAttempt(store, user, solve());

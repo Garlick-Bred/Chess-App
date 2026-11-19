@@ -88,7 +88,18 @@ zeroing move that keeps the win counts as progress.
 * **Defending drills (you hold the draw):** the computer only plays moves that
   keep its draw, weighted toward pawn pushes, checks and king moves toward your
   king, so the pressure is real.
-* It replies after about 0.4 s. Your clock pauses while it "thinks".
+* It replies as soon as the tablebase answers, with a 0.22 s minimum so the
+  move is visible. Your clock pauses while it "thinks".
+* **Keeping it fast:** while you think, the app looks up the positions after
+  your likeliest moves (the top three perfect moves, and every move of a piece
+  you pick up), so most replies are already cached. Lookups go to our server
+  first; if it hasn't answered in 0.6 s the browser also asks Lichess directly
+  and takes whichever is first. The server caches answers at the Cloudflare
+  edge and in D1, writes the cache after replying, and gives up on Lichess
+  rate limits immediately instead of waiting.
+* **Premoves:** while the computer is moving you can queue your next move (tap
+  or drag as usual, shown in blue). It's played the moment the computer moves,
+  if it's still legal; otherwise it's dropped. Tap anywhere else to cancel.
 
 ## 4. Points
 
@@ -97,12 +108,14 @@ zeroing move that keeps the win counts as progress.
 | Solve | drill base × (1 + 0.25 × (level − 1)) |
 | Efficiency bonus | up to +50% of base × efficiency² |
 | Speed bonus | up to +50% of base: full at ≤ half of par, half at par, zero at 1.5 × par |
-| Perfect play | +25% (no wasted moves, hints or takebacks) |
+| Perfect play | +25% (no wasted moves, hints of either kind, or takebacks) |
 | Only moves (defending) | +5% each, max +25% |
-| Hint | −20% each (first press shows the piece, second the square) |
+| Written hint | −10% each: describes the idea ("cut the king off") without naming the move |
+| Piece hint | −20% each: highlights which piece to move, not where |
 | Takeback | −25% each |
 | New personal-best pace | +10% (after 3 solves of that drill) |
 | Floor | a solve is always worth at least 20% of base. A failure is worth 0. |
+| Replay after a lesson | the total is halved, and there is no perfect bonus |
 
 **Base points by difficulty:** Ladder 8 · Queen mate 10 · Rook mate 15 ·
 Escort the pawn 18 · Opposition defence 18 · Queen vs pawn 28 · Philidor 30 ·
@@ -138,7 +151,11 @@ Seconds-per-move drops with level (e.g. rook mate: 4.5 → 2.5 s).
   | Warm-up: 500+ below you | Ladder, queen and rook mates | **¼ clove** |
 
   Level 3 is worth 1.5x and the speed levels (4-5) 2x, capped at one clove, so
-  getting fast at an easy mate still pays. A hint or takeback halves the value.
+  getting fast at an easy mate still pays. A piece hint or takeback halves the
+  value. A written hint costs points but not clove value.
+* **Lesson replays:** solving a puzzle again right after its lesson earns a
+  **full clove** whatever the drill, at most twice a day. Replays don't count
+  toward level-ups or personal bests.
   At 1300, a full bulb takes about five drills at your level, or about thirteen
   two-rook mates at level 3.
 * New players are placed by rating: warm-up drills start at level 3 and easy
@@ -149,7 +166,27 @@ Seconds-per-move drops with level (e.g. rook mate: 4.5 → 2.5 s).
   and 30 days).
 * The day resets at **your local midnight**.
 
-## 7. Variety from a fixed bank
+## 7. Hints and lessons (no LLM)
+
+Hints and lessons come from rules on top of the tablebase, so they are never
+wrong about the position. `shared/hints.js` measures the defending king's
+**box** (the squares it can reach without walking into an attack; an
+undefended piece doesn't count as a wall) and tags each move with what it does:
+mate, promote, capture, build the bridge, cut off, check that drives back,
+take the opposition, step back, third-rank defence, check from behind, king
+approach, waiting move. Among the equally perfect moves it picks the easiest
+to explain.
+
+* **💬 Hint** gives the idea in words, plus a stalemate warning if one of
+  your moves would stalemate, and "only N moves keep the win" when that's so.
+* **🎯 Show piece** circles the piece to move.
+* **📖 Lessons** (the Learn tab, or "Show me how" after a failed puzzle) start
+  from the same position and step through perfect play move by move, with an
+  arrow for the next move, the king's box shaded, and one sentence per move.
+  The defender plays the longest resistance. At the end, "Play it yourself"
+  replays the puzzle for a clove.
+
+## 8. Variety from a fixed bank
 
 `shared/puzzles.json` holds 60 positions per drill (660 in total), each one
 verified against the tablebase, non-trivial (at least one move throws the result

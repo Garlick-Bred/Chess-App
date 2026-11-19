@@ -27,6 +27,16 @@ export interface BoardProps {
   coordinates?: boolean;
   autoQueen?: boolean;
   onMove: (from: string, to: string, promotion?: string) => void;
+  /** Allow queuing a move while it is not your turn. */
+  premovable?: boolean;
+  premoveDests?: Map<string, string[]>;
+  premove?: { from: string; to: string } | null;
+  onPremove?: (from: string, to: string, promotion?: string) => void;
+  onCancelPremove?: () => void;
+  /** Called when the player picks up one of their pieces. */
+  onSelect?: (square: string) => void;
+  /** Squares to shade (a lesson's "king box"). */
+  region?: Set<string> | null;
 }
 
 interface PieceOnBoard {
@@ -91,7 +101,11 @@ function matchPieces(prev: PieceOnBoard[], next: { piece: string; square: string
 }
 
 export default function Board(props: BoardProps) {
-  const { fen, orientation, userColor, interactive, dests, lastMove, check, hintFrom, arrows = [], badge, coordinates = true, autoQueen = false, onMove } = props;
+  const { fen, orientation, userColor, interactive, lastMove, check, hintFrom, arrows = [], badge, coordinates = true, autoQueen = false, onMove } = props;
+  const { premovable = false, premove = null, onPremove, onCancelPremove, onSelect, region = null } = props;
+  // While premoving, pieces can go where they could go if it were your move.
+  const premoving = !interactive && premovable;
+  const dests = premoving ? props.premoveDests ?? new Map<string, string[]>() : props.dests;
   const boardRef = useRef<HTMLDivElement>(null);
   const ghostRef = useRef<HTMLImageElement>(null);
   const prevPieces = useRef<PieceOnBoard[]>([]);
@@ -115,8 +129,8 @@ export default function Board(props: BoardProps) {
     setPromo(null);
   }, [fen]);
   useEffect(() => {
-    if (!interactive) setSelected(null);
-  }, [interactive]);
+    if (!interactive && !premovable) setSelected(null);
+  }, [interactive, premovable]);
 
   // Grid position of a square for the current orientation.
   const pos = useCallback(
@@ -140,6 +154,11 @@ export default function Board(props: BoardProps) {
     if (!p) return;
     const isPromotion = p.piece[1] === 'P' && (to[1] === '8' || to[1] === '1');
     if (instant) instantId.current = p.id;
+    if (premoving) {
+      setSelected(null);
+      onPremove?.(from, to, isPromotion ? 'q' : undefined);
+      return;
+    }
     if (isPromotion && !autoQueen) {
       setPromo({ from, to });
       return;
@@ -160,7 +179,7 @@ export default function Board(props: BoardProps) {
     if (e.button !== 0 || promo) return;
     const sq = squareAt(e.clientX, e.clientY);
     if (!sq) return;
-    if (!interactive) {
+    if (!interactive && !premovable) {
       setSelected(null);
       return;
     }
@@ -172,11 +191,13 @@ export default function Board(props: BoardProps) {
     if (p && p.piece[0] === userColor) {
       const wasSelected = selected === sq;
       setSelected(sq);
+      if (!premoving) onSelect?.(sq);
       drag.current = { from: sq, id: p.id, piece: p.piece, x: e.clientX, y: e.clientY, started: false, wasSelected };
       boardRef.current?.setPointerCapture(e.pointerId);
       e.preventDefault();
     } else {
       setSelected(null);
+      if (premove) onCancelPremove?.(); // tap elsewhere cancels a queued premove
     }
   };
 
@@ -226,7 +247,9 @@ export default function Board(props: BoardProps) {
       const light = (col + row) % 2 === 0;
       const cls = ['sq', light ? 'light' : 'dark'];
       if (lastMove && (lastMove[0] === sq || lastMove[1] === sq)) cls.push('last');
-      if (selected === sq) cls.push('selected');
+      if (selected === sq) cls.push(premoving ? 'selected premove-sel' : 'selected');
+      if (premove && (premove.from === sq || premove.to === sq)) cls.push('premove');
+      if (region?.has(sq)) cls.push('region');
       if (check === sq) cls.push('check');
       if (hintFrom === sq) cls.push('hint');
       if (dragging && hover === sq) cls.push('hover');

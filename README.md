@@ -26,6 +26,12 @@ solve.
 * **Drag or tap** to move. The selected piece's square lights up and the piece
   glows, legal moves show as dots and rings, the computer's moves slide in, and
   there's a promotion picker.
+* **Premoves:** queue your next move while the computer is replying.
+* **Two kinds of hint:** a written hint that describes the idea ("use your
+  rook to cut off the king's escape"), or one that highlights the piece to move.
+* **Lessons** (Learn tab, or "Show me how" after a failed puzzle) walk through
+  the perfect moves from the puzzle's own position, one explained step at a
+  time. Replaying the puzzle afterwards earns a full clove (twice a day).
 * **Points** for solving, efficiency and speed against par, with penalties for
   hints and takebacks. Ranks run from Sprout to Garlick Grandmaster.
 * **Daily Garlick bulb:** solves colour in cloves. A drill at your level

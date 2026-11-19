@@ -21,7 +21,12 @@ function pickRandomDrill(progress: Record<string, { stars: number }>, rating: nu
   return pool[0].id;
 }
 
-export default function PlayPage({ drillId, levelParam }: { drillId: string; levelParam: string | null }) {
+export default function PlayPage({ drillId, query }: { drillId: string; query: URLSearchParams }) {
+  const levelParam = query.get('level');
+  // A lesson replay plays the exact position from the lesson.
+  const fixedFen = query.get('fen');
+  const lessonReplay = query.get('lesson') === '1' && !!fixedFen;
+  const mateParam = query.get('mate');
   const { me } = useApp();
   const random = drillId === 'random';
   const [round, setRound] = useState(0);
@@ -46,7 +51,19 @@ export default function PlayPage({ drillId, levelParam }: { drillId: string; lev
     return levelParam ? Math.max(1, Math.min(current, Number(levelParam) || current)) : current;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [actualId, round, levelParam]);
-  return <Session key={`${actualId}-${requested}-${round}`} drillId={actualId} level={requested} random={random} onNext={() => setRound((r) => r + 1)} />;
+  // Replays are one-off: "Next" after a replay moves on to a fresh puzzle.
+  const fixed = round === 0 && fixedFen ? { fen: fixedFen, mateIn: mateParam ? Number(mateParam) : null } : null;
+  return (
+    <Session
+      key={`${actualId}-${requested}-${round}-${fixed ? 'fixed' : 'bank'}`}
+      drillId={actualId}
+      level={requested}
+      random={random}
+      fixed={fixed}
+      lessonReplay={lessonReplay && round === 0}
+      onNext={() => setRound((r) => r + 1)}
+    />
+  );
 }
 
 function Clock({ getElapsed, running, par }: { getElapsed: () => number; running: boolean; par: number }) {
@@ -66,10 +83,36 @@ function Clock({ getElapsed, running, par }: { getElapsed: () => number; running
   );
 }
 
-function Session({ drillId, level, random, onNext }: { drillId: string; level: number; random: boolean; onNext: () => void }) {
+function Session({
+  drillId,
+  level,
+  random,
+  fixed,
+  lessonReplay,
+  onNext,
+}: {
+  drillId: string;
+  level: number;
+  random: boolean;
+  fixed: { fen: string; mateIn: number | null } | null;
+  lessonReplay: boolean;
+  onNext: () => void;
+}) {
   const { me, refresh } = useApp();
   const drill = getDrill(drillId);
-  const { view, dests, check, onMove, hint, takeBack, giveUp, restart, getElapsed } = useDrill(drillId, level, me.user.settings.playAs);
+  const { view, dests, premoveDests, check, onMove, onSelect, setPremove, cancelPremove, textHint, pieceHint, takeBack, giveUp, restart, getElapsed } = useDrill({
+    drillId,
+    level,
+    playAs: me.user.settings.playAs,
+    fixed,
+    lessonReplay,
+  });
+  const openLesson = () => {
+    if (!view) return;
+    const q = new URLSearchParams({ fen: view.startFen, level: String(level) });
+    if (view.puzzle.mateIn != null) q.set('mate', String(view.puzzle.mateIn));
+    go(`/lesson/${drillId}?${q.toString()}`);
+  };
   const [flipped, setFlipped] = useState(false);
   const [showTips, setShowTips] = useState(level <= 1);
   const [modalOpen, setModalOpen] = useState(true);
@@ -85,13 +128,14 @@ function Session({ drillId, level, random, onNext }: { drillId: string; level: n
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.target instanceof HTMLInputElement) return;
-      if (e.key === 'h' && view?.phase === 'user') void hint();
+      if (e.key === 'h' && view?.phase === 'user') void textHint();
+      if (e.key === 'p' && view?.phase === 'user') void pieceHint();
       if (e.key === 'f') setFlipped((f) => !f);
       if (e.key === 'Enter' && view?.phase === 'done') onNext();
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [view?.phase, hint, onNext]);
+  }, [view?.phase, textHint, pieceHint, onNext]);
 
   if (!view) return <div className="page">Loading…</div>;
   const userSide = view.userColor === 'w' ? 'White' : 'Black';
@@ -126,6 +170,12 @@ function Session({ drillId, level, random, onNext }: { drillId: string; level: n
             userColor={view.userColor}
             interactive={view.phase === 'user'}
             dests={dests}
+            premovable={view.phase === 'computer' || view.phase === 'thinking'}
+            premoveDests={premoveDests}
+            premove={view.premove}
+            onPremove={setPremove}
+            onCancelPremove={cancelPremove}
+            onSelect={onSelect}
             lastMove={view.lastMove}
             check={check}
             hintFrom={view.hintFrom}
@@ -176,7 +226,7 @@ function Session({ drillId, level, random, onNext }: { drillId: string; level: n
           <div className="row between">
             <div>
               <div className="eyebrow">
-                {random ? '🎲 Random · ' : ''}
+                {view.lessonReplay ? '📖 Lesson replay · ' : random ? '🎲 Random · ' : ''}
                 <TierChip tier={drill.tier} /> Level {level}
                 {level >= 4 ? ' · speed' : ''}
               </div>
@@ -185,7 +235,7 @@ function Session({ drillId, level, random, onNext }: { drillId: string; level: n
             <Material drillId={drill.id} size={20} />
           </div>
           <div style={{ marginTop: 6 }}>
-            <CloveChip drill={drill} level={level} rating={me.user.rating} />
+            <CloveChip drill={drill} level={level} rating={me.user.rating} lessonReplay={view.lessonReplay} />
           </div>
           <div className="goal">
             <span className={`side-dot ${view.userColor}`} />
@@ -244,6 +294,17 @@ function Session({ drillId, level, random, onNext }: { drillId: string; level: n
           )}
         </div>
 
+        {view.writtenHintText && view.phase === 'user' && (
+          <div className="hint-box">
+            <b>💬 Hint</b> {view.writtenHintText}
+          </div>
+        )}
+        {view.premove && (
+          <div className="premove-note small">
+            Premove queued: {view.premove.from}→{view.premove.to}. It plays the moment it's your turn (tap an empty square to cancel).
+          </div>
+        )}
+
         {view.stalled && view.phase === 'user' && (
           <div className="stall">
             <b>Going in circles?</b> No progress toward mate in your last 5 moves. Try the plan in the tips, or take a hint.
@@ -263,8 +324,11 @@ function Session({ drillId, level, random, onNext }: { drillId: string; level: n
         </div>
 
         <div className="actions">
-          <button className="btn" onClick={() => void hint()} disabled={view.phase !== 'user'} title="Keyboard: H">
-            💡 Hint <small>-20%</small>
+          <button className="btn" onClick={() => void textHint()} disabled={view.phase !== 'user' || !!view.writtenHintText} title="A written idea, not the move (keyboard: H)">
+            💬 Hint <small>-10%</small>
+          </button>
+          <button className="btn" onClick={() => void pieceHint()} disabled={view.phase !== 'user' || !!view.hintFrom} title="Highlights the piece to move (keyboard: P)">
+            🎯 Show piece <small>-20%</small>
           </button>
           <button className="btn" onClick={() => setFlipped((f) => !f)} title="Keyboard: F">
             ⇅ Flip
@@ -305,6 +369,7 @@ function Session({ drillId, level, random, onNext }: { drillId: string; level: n
           prevCloves={prevCloves}
           onNext={onNext}
           onRetry={() => restart(true)}
+          onLesson={openLesson}
           onReview={() => setModalOpen(false)}
           onDrills={() => go('/drills')}
           isMaxLevel={level >= MAX_LEVEL}

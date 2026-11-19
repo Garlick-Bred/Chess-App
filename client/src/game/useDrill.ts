@@ -2,9 +2,10 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Chess, type Move, type Square } from 'chess.js';
 import { getDrill, parSeconds, moveCap, holdMovesFor, bankLevel } from '@shared/drills.js';
 import { gradeMove, GRADE_INFO, bestMoves, pickComputerMove, positionDistance, isStalling } from '@shared/grading.js';
+import { writtenHint, bestExplained } from '@shared/hints.js';
 import { randomVariant } from '@shared/symmetry.js';
 import bank from '@shared/puzzles.json';
-import { probe, type TbMove, type TbResult } from '../tablebase';
+import { probe, prefetch, type TbMove, type TbResult } from '../tablebase';
 import { api, localDay, type AttemptResult } from '../api';
 import { sfx } from '../sound';
 import type { Arrow } from '../components/Board';
@@ -23,6 +24,12 @@ export interface MoveRec {
   color: 'w' | 'b';
   by: 'user' | 'computer';
   grade?: string;
+}
+
+export interface Premove {
+  from: string;
+  to: string;
+  promotion?: string;
 }
 
 export interface DrillView {
@@ -45,6 +52,8 @@ export interface DrillView {
   grades: Record<string, number>;
   wastePlies: number;
   hints: number;
+  writtenHints: number;
+  writtenHintText: string | null;
   takebacks: number;
   onlyMoves: number;
   distance: number | null;
@@ -56,9 +65,22 @@ export interface DrillView {
   result: AttemptResult | null;
   submitError: string | null;
   tbError: string | null;
+  premove: Premove | null;
+  lessonReplay: boolean;
+}
+
+export interface DrillOptions {
+  drillId: string;
+  level: number;
+  playAs: 'white' | 'black' | 'random';
+  /** Play this exact position (e.g. replaying a lesson) instead of a random one. */
+  fixed?: { fen: string; mateIn: number | null } | null;
+  lessonReplay?: boolean;
 }
 
 const RECENT_KEY = 'ge_recent_puzzles';
+// The computer replies at most this fast, so its move is visible as a move.
+const MIN_REPLY_MS = 220;
 
 function pickPuzzle(drillId: string, level: number): Puzzle {
   const all: Puzzle[] = (bank as any).drills[drillId] ?? [];
@@ -97,73 +119,122 @@ function hasPawns(chess: Chess, color: 'w' | 'b') {
   return chess.board().some((row) => row.some((p) => p && p.color === color && p.type === 'p'));
 }
 
+/** FEN after a move, without touching the game. */
+function fenAfter(fen: string, uci: string): string | null {
+  try {
+    const c = new Chess(fen);
+    c.move({ from: uci.slice(0, 2), to: uci.slice(2, 4), promotion: uci[4] });
+    return c.fen();
+  } catch {
+    return null;
+  }
+}
+
+/** Where each of the user's pieces could go if it were their move (for premoves). */
+function premoveDestinations(fen: string, color: 'w' | 'b'): Map<string, string[]> {
+  const parts = fen.split(' ');
+  parts[1] = color;
+  parts[3] = '-';
+  const out = new Map<string, string[]>();
+  try {
+    const c = new Chess(parts.join(' '), { skipValidation: true });
+    for (const m of c.moves({ verbose: true })) {
+      const list = out.get(m.from) ?? [];
+      if (!list.includes(m.to)) list.push(m.to);
+      out.set(m.from, list);
+    }
+  } catch {
+    /* ignore */
+  }
+  return out;
+}
+
 interface Game extends DrillView {
   chess: Chess;
   elapsed: number;
   turnStart: number | null;
-  hintStage: number;
+  pieceHintShown: boolean;
+  textHintShown: boolean;
   badgeKey: number;
   gameId: number;
-  submitted: boolean;
   distances: (number | null)[];
 }
 
-export function useDrill(drillId: string, level: number, playAs: 'white' | 'black' | 'random') {
+export function useDrill({ drillId, level, playAs, fixed = null, lessonReplay = false }: DrillOptions) {
   const g = useRef<Game | null>(null);
   const [, setTick] = useState(0);
   const rerender = useCallback(() => setTick((t) => t + 1), []);
   const gameCounter = useRef(0);
+  const onMoveRef = useRef<(from: string, to: string, promotion?: string) => Promise<void>>();
 
-  const start = useCallback((same = false) => {
-    const drill = getDrill(drillId);
-    const prev = g.current;
-    const puzzle = same && prev ? prev.puzzle : pickPuzzle(drillId, level);
-    const startFen = same && prev ? prev.startFen : randomVariant(puzzle.fen, playAs);
-    const chess = new Chess(startFen);
-    const id = ++gameCounter.current;
-    g.current = {
-      drill,
-      level,
-      puzzle,
-      startFen,
-      userColor: chess.turn(),
-      fen: chess.fen(),
-      phase: 'user',
-      moves: [],
-      lastMove: null,
-      badge: null,
-      hintFrom: null,
-      arrows: [],
-      userMoves: 0,
-      cap: moveCap(drill, puzzle),
-      holdMoves: drill.goal === 'hold' ? holdMovesFor(drill, level) : null,
-      par: parSeconds(drill, puzzle, level),
-      grades: {},
-      wastePlies: 0,
-      hints: 0,
-      takebacks: 0,
-      onlyMoves: 0,
-      distance: null,
-      startDistance: null,
-      stalled: false,
-      lastGrade: null,
-      blunder: null,
-      outcome: null,
-      result: null,
-      submitError: null,
-      tbError: null,
-      chess,
-      elapsed: 0,
-      turnStart: performance.now(),
-      hintStage: 0,
-      badgeKey: 0,
-      gameId: id,
-      submitted: false,
-      distances: [],
-    };
-    rerender();
-    void trackDistance(id);
-  }, [drillId, level, playAs, rerender]);
+  const start = useCallback(
+    (same = false) => {
+      const drill = getDrill(drillId);
+      const prev = g.current;
+      let puzzle: Puzzle;
+      let startFen: string;
+      if (same && prev) {
+        puzzle = prev.puzzle;
+        startFen = prev.startFen;
+      } else if (fixed) {
+        puzzle = { fen: fixed.fen, mateIn: fixed.mateIn, holding: 0, level };
+        startFen = fixed.fen;
+      } else {
+        puzzle = pickPuzzle(drillId, level);
+        startFen = randomVariant(puzzle.fen, playAs);
+      }
+      const chess = new Chess(startFen);
+      const id = ++gameCounter.current;
+      g.current = {
+        drill,
+        level,
+        puzzle,
+        startFen,
+        userColor: chess.turn(),
+        fen: chess.fen(),
+        phase: 'user',
+        moves: [],
+        lastMove: null,
+        badge: null,
+        hintFrom: null,
+        arrows: [],
+        userMoves: 0,
+        cap: moveCap(drill, puzzle),
+        holdMoves: drill.goal === 'hold' ? holdMovesFor(drill, level) : null,
+        par: parSeconds(drill, puzzle, level),
+        grades: {},
+        wastePlies: 0,
+        hints: 0,
+        writtenHints: 0,
+        writtenHintText: null,
+        takebacks: 0,
+        onlyMoves: 0,
+        distance: null,
+        startDistance: null,
+        stalled: false,
+        lastGrade: null,
+        blunder: null,
+        outcome: null,
+        result: null,
+        submitError: null,
+        tbError: null,
+        premove: null,
+        lessonReplay,
+        chess,
+        elapsed: 0,
+        turnStart: performance.now(),
+        pieceHintShown: false,
+        textHintShown: false,
+        badgeKey: 0,
+        gameId: id,
+        distances: [],
+      };
+      rerender();
+      void trackDistance(id);
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [drillId, level, playAs, fixed?.fen, lessonReplay, rerender],
+  );
 
   useEffect(() => {
     start(false);
@@ -188,11 +259,20 @@ export function useDrill(drillId: string, level: number, playAs: 'white' | 'blac
     return s.elapsed + (s.turnStart != null ? performance.now() - s.turnStart : 0);
   }, []);
 
+  /** At the user's turn: read the distance to the goal and warm likely next positions. */
   async function trackDistance(id: number) {
     const s = g.current!;
+    const fen = s.chess.fen();
     try {
-      const tb = await probe(s.chess.fen());
+      const tb = await probe(fen);
       if (!alive(id)) return;
+      // While you think, fetch the computer's answer to your most likely moves.
+      prefetch(
+        (bestMoves(tb) as TbMove[])
+          .slice(0, 3)
+          .map((m) => fenAfter(fen, m.uci))
+          .filter((f): f is string => !!f),
+      );
       const d = positionDistance(tb);
       s.distance = d;
       if (s.startDistance == null) s.startDistance = d;
@@ -227,6 +307,7 @@ export function useDrill(drillId: string, level: number, playAs: 'white' | 'blac
     s.outcome = { success, reason };
     s.hintFrom = null;
     s.arrows = [];
+    s.premove = null;
     success ? sfx.success() : sfx.fail();
     rerender();
     const id = s.gameId;
@@ -242,9 +323,11 @@ export function useDrill(drillId: string, level: number, playAs: 'white' | 'blac
         wastePlies: s.wastePlies,
         grades: s.grades,
         hints: s.hints,
+        writtenHints: s.writtenHints,
         takebacks: s.takebacks,
         onlyMoves: s.onlyMoves,
         mateIn: s.puzzle.mateIn,
+        lessonReplay: s.lessonReplay,
         day: localDay(),
       });
       if (!sameGame(id)) return;
@@ -285,7 +368,7 @@ export function useDrill(drillId: string, level: number, playAs: 'white' | 'blac
       const m = legal[Math.floor(Math.random() * legal.length)];
       uci = m.from + m.to + (m.promotion ?? '');
     }
-    await sleep(Math.max(0, 380 - (performance.now() - t0)));
+    await sleep(Math.max(0, MIN_REPLY_MS - (performance.now() - t0)));
     if (!alive(id)) return;
     const move = s.chess.move({ from: uci.slice(0, 2), to: uci.slice(2, 4), promotion: uci[4] });
     s.fen = s.chess.fen();
@@ -304,6 +387,17 @@ export function useDrill(drillId: string, level: number, playAs: 'white' | 'blac
     }
     s.phase = 'user';
     resumeClock();
+    // A queued premove plays instantly if it is legal now; otherwise it is dropped.
+    const pm = s.premove;
+    s.premove = null;
+    if (pm) {
+      const legal = s.chess.moves({ verbose: true }).find((m) => m.from === pm.from && m.to === pm.to);
+      if (legal) {
+        void trackDistance(id);
+        await onMoveRef.current?.(pm.from, pm.to, legal.promotion ? pm.promotion ?? 'q' : undefined);
+        return;
+      }
+    }
     rerender();
     void trackDistance(id);
   };
@@ -323,11 +417,15 @@ export function useDrill(drillId: string, level: number, playAs: 'white' | 'blac
       pauseClock();
       s.phase = 'thinking';
       s.fen = s.chess.fen();
+      // Ask for the computer's reply right away, in parallel with grading.
+      prefetch([s.fen]);
       s.lastMove = [from, to];
       s.badge = null;
       s.hintFrom = null;
       s.arrows = [];
-      s.hintStage = 0;
+      s.writtenHintText = null;
+      s.pieceHintShown = false;
+      s.textHintShown = false;
       s.moves.push({ san: move.san, color: move.color, by: 'user' });
       if (s.chess.inCheck()) sfx.check();
       else if (move.captured) sfx.capture();
@@ -366,6 +464,7 @@ export function useDrill(drillId: string, level: number, playAs: 'white' | 'blac
           after: res.after,
           stalemate: s.chess.isStalemate(),
         };
+        s.premove = null;
         s.phase = 'blunder';
         sfx.blunder();
         rerender();
@@ -392,19 +491,66 @@ export function useDrill(drillId: string, level: number, playAs: 'white' | 'blac
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [],
   );
+  onMoveRef.current = onMove;
 
-  const hint = useCallback(async () => {
+  /** Picking up a piece: warm the computer's replies to each of its moves. */
+  const onSelect = useCallback((square: string) => {
     const s = g.current;
-    if (!s || s.phase !== 'user' || s.hintStage >= 2) return;
+    if (!s || s.phase !== 'user') return;
+    const fen = s.chess.fen();
+    const moves = s.chess.moves({ square: square as Square, verbose: true }).slice(0, 8);
+    prefetch(moves.map((m) => fenAfter(fen, m.from + m.to + (m.promotion ?? ''))).filter((f): f is string => !!f));
+  }, []);
+
+  /** Queue a move while the computer is thinking. */
+  const setPremove = useCallback(
+    (from: string, to: string, promotion?: string) => {
+      const s = g.current;
+      if (!s || (s.phase !== 'computer' && s.phase !== 'thinking')) return;
+      s.premove = { from, to, promotion };
+      rerender();
+    },
+    [rerender],
+  );
+  const cancelPremove = useCallback(() => {
+    const s = g.current;
+    if (!s || !s.premove) return;
+    s.premove = null;
+    rerender();
+  }, [rerender]);
+
+  /** Written hint: the idea behind a perfect move, in words (-10%). */
+  const textHint = useCallback(async () => {
+    const s = g.current;
+    if (!s || s.phase !== 'user' || s.textHintShown) return;
     const id = s.gameId;
     try {
-      const tb = await probe(s.chess.fen());
-      if (!alive(id) || s.phase !== 'user') return;
-      const best = bestMoves(tb)[0];
-      if (!best) return;
-      if (s.hintStage === 0) s.hintFrom = best.uci.slice(0, 2);
-      else s.arrows = [{ from: best.uci.slice(0, 2), to: best.uci.slice(2, 4), color: '#3d9be9' }];
-      s.hintStage++;
+      const fen = s.chess.fen();
+      const tb = await probe(fen);
+      if (!alive(id) || s.phase !== 'user' || s.chess.fen() !== fen) return;
+      s.writtenHintText = writtenHint(fen, tb, s.drill);
+      s.textHintShown = true;
+      s.writtenHints++;
+      rerender();
+    } catch {
+      s.tbError = 'Tablebase unreachable - no hint available.';
+      rerender();
+    }
+  }, [rerender]);
+
+  /** Piece hint: highlight the piece to move, never the move itself (-20%). */
+  const pieceHint = useCallback(async () => {
+    const s = g.current;
+    if (!s || s.phase !== 'user' || s.pieceHintShown) return;
+    const id = s.gameId;
+    try {
+      const fen = s.chess.fen();
+      const tb = await probe(fen);
+      if (!alive(id) || s.phase !== 'user' || s.chess.fen() !== fen) return;
+      const pick = bestExplained(fen, tb, s.drill);
+      if (!pick) return;
+      s.hintFrom = pick.uci.slice(0, 2);
+      s.pieceHintShown = true;
       s.hints++;
       rerender();
     } catch {
@@ -447,7 +593,23 @@ export function useDrill(drillId: string, level: number, playAs: 'white' | 'blac
       dests.set(m.from, list);
     }
   }
+  const premoveDests = s && (s.phase === 'computer' || s.phase === 'thinking') ? premoveDestinations(s.chess.fen(), s.userColor) : new Map<string, string[]>();
   const check = s && s.chess.inCheck() ? findKing(s.chess, s.chess.turn()) : null;
 
-  return { view: s as DrillView | null, dests, check, onMove, hint, takeBack, giveUp, restart: start, getElapsed };
+  return {
+    view: s as DrillView | null,
+    dests,
+    premoveDests,
+    check,
+    onMove,
+    onSelect,
+    setPremove,
+    cancelPremove,
+    textHint,
+    pieceHint,
+    takeBack,
+    giveUp,
+    restart: start,
+    getElapsed,
+  };
 }

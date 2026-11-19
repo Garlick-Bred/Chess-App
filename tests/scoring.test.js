@@ -77,3 +77,18 @@ describe('par and caps', () => {
     expect(moveCap(kqk, { mateIn: 6 })).toBe(14);
   });
 });
+
+describe('written hints and lesson replays', () => {
+  const base = { drill: kqk, level: 1, success: true, durationMs: 10000, userMoves: 5, wastePlies: 0, parSeconds: 25 };
+  it('written hints cost 10% each and remove the perfect bonus', () => {
+    const s = scoreAttempt({ ...base, writtenHints: 1 });
+    expect(s.perfect).toBe(false);
+    expect(s.breakdown.find((b) => b.label.startsWith('Written hints')).points).toBe(-1);
+  });
+  it('a replay after a lesson earns half points and no perfect bonus', () => {
+    const normal = scoreAttempt(base);
+    const replay = scoreAttempt({ ...base, lessonReplay: true });
+    expect(replay.perfect).toBe(false);
+    expect(replay.total).toBe(Math.round((normal.total - Math.round(normal.base * 0.25)) / 2));
+  });
+});

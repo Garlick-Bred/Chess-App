@@ -5,6 +5,7 @@ import GarlickBulb from './GarlickBulb';
 const NAV = [
   { page: 'home', label: 'Home', icon: '⌂' },
   { page: 'drills', label: 'Drills', icon: '♞' },
+  { page: 'learn', label: 'Learn', icon: '📖' },
   { page: 'stats', label: 'Stats', icon: '📈' },
   { page: 'badges', label: 'Badges', icon: '🏅' },
   { page: 'family', label: 'Family', icon: '👪' },

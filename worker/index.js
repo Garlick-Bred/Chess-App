@@ -30,7 +30,7 @@ function serveEmbedded(request) {
 const LOCAL_HOSTS = new Set(['localhost', '127.0.0.1', '[::1]']);
 
 export default {
-  async fetch(request, env) {
+  async fetch(request, env, ctx) {
     // Always use HTTPS in production (session cookies are Secure there).
     const url = new URL(request.url);
     if (url.protocol === 'http:' && !LOCAL_HOSTS.has(url.hostname)) {
@@ -42,7 +42,7 @@ export default {
       store: createD1Store(env.DB),
       env: { INVITE_CODE: env.INVITE_CODE ?? '', TABLEBASE_URL: env.TABLEBASE_URL },
     });
-    const api = await handle(request);
+    const api = await handle(request, ctx);
     if (api) return api;
     if (env.ASSETS) return env.ASSETS.fetch(request);
     return serveEmbedded(request);

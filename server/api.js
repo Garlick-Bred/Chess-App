@@ -64,7 +64,7 @@ export function createApi({ store, env = {} }) {
     }
   }
 
-  return async function handle(request) {
+  return async function handle(request, ctx) {
     const url = new URL(request.url);
     if (!url.pathname.startsWith('/api/')) return null;
     ready ??= ensureSchema(store).catch((e) => {
@@ -73,7 +73,7 @@ export function createApi({ store, env = {} }) {
     });
     try {
       await ready;
-      return await route(request, url);
+      return await route(request, url, ctx);
     } catch (e) {
       const status = e.status ?? 500;
       if (status >= 500) console.error(e);
@@ -81,7 +81,7 @@ export function createApi({ store, env = {} }) {
     }
   };
 
-  async function route(request, url) {
+  async function route(request, url, ctx) {
     const method = request.method;
     const path = url.pathname;
     const secure = env.COOKIE_SECURE === '1' || url.protocol === 'https:';
@@ -207,7 +207,8 @@ export function createApi({ store, env = {} }) {
       const fen = url.searchParams.get('fen') ?? '';
       if (!validFen(fen)) throw httpError(400, 'Bad FEN (max 7 pieces)');
       try {
-        return json(await lookup(store, fen, env.TABLEBASE_URL), 200, { 'Cache-Control': 'private, max-age=86400' });
+        const waitUntil = ctx?.waitUntil ? (p) => ctx.waitUntil(p) : undefined;
+        return json(await lookup(store, fen, env.TABLEBASE_URL, { waitUntil }), 200, { 'Cache-Control': 'private, max-age=86400' });
       } catch (e) {
         throw httpError(502, `Tablebase unavailable: ${e.message}`);
       }

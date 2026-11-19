@@ -11,6 +11,8 @@ import StatsPage from './pages/Stats';
 import AchievementsPage from './pages/Achievements';
 import LeaderboardPage from './pages/Leaderboard';
 import SettingsPage from './pages/Settings';
+import LearnPage from './pages/Learn';
+import LessonPage from './pages/Lesson';
 
 interface AppCtx {
   me: Me;
@@ -107,7 +109,13 @@ export default function App() {
       page = <DrillsPage open={route.arg} />;
       break;
     case 'play':
-      page = <PlayPage drillId={route.arg ?? 'random'} levelParam={route.query.get('level')} />;
+      page = <PlayPage key={window.location.hash} drillId={route.arg ?? 'random'} query={route.query} />;
+      break;
+    case 'learn':
+      page = <LearnPage />;
+      break;
+    case 'lesson':
+      page = <LessonPage key={window.location.hash} drillId={route.arg ?? ''} query={route.query} />;
       break;
     case 'stats':
       page = <StatsPage />;

@@ -8,6 +8,11 @@
   profiles with chess rating, and rating-based starting levels.
 * Harder cloves: drills below your level only fill part of one.
 * "Garlick" naming and the cartoon bulb.
+* Faster computer replies (prefetching, edge cache, direct Lichess fallback)
+  and premoves.
+* Written hints and piece hints, built from rules on the tablebase (no AI).
+* Lessons for every drill, offered after a failed puzzle, with a one-clove
+  replay.
 
 ## Still worth building
 
@@ -35,8 +40,9 @@ Roughly in order of value for you:
 7. **Adaptive par times** from the family's own median times once there is
    enough data.
 8. **Install as an app (PWA)** with haptics on phones.
-9. **Grounded explanations:** an AI coach that explains the tablebase's verdict
-   and is checked against it, never judging moves itself.
+9. **Richer explanations:** the rule-based hints cover boxes, opposition,
+   bridges and checks. An AI coach could add longer explanations, as long as
+   it is checked against the tablebase and never judges moves itself.
 
 ## Decisions I made that you might want to change
 
@@ -49,6 +55,8 @@ Roughly in order of value for you:
 | Leaderboard | Raw points, weekly and all-time; ratings visible to the family | Handicap by rating so everyone can compete |
 | Sign-ups | Open: anyone who finds the site can create an account (the invite code was removed on request) | Set an `INVITE_CODE` secret again, or close sign-ups once the family has joined |
 | Passwords | At least 8 characters, no email recovery | Admin reset, or email-based reset |
+| Hint costs | Written hint −10% points (clove kept); piece hint −20% points and half the clove | Free written hints, or a limit per puzzle |
+| Lesson replay | A full clove for solving the puzzle after its lesson, at most 2 a day, half points, no level-up credit | 1 a day, or only for drills at your level |
 
 ## Open questions
 

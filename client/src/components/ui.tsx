@@ -7,9 +7,17 @@ import { cloveValue, drillFit, formatCloves } from '@shared/cloves.js';
 const FIT_LABEL: Record<string, string> = { warmup: 'Warm-up', easy: 'Easy for you', core: 'Your level' };
 
 /** What a solve of this drill is worth to this player, e.g. "Warm-up · ¼ clove". */
-export function CloveChip({ drill, level, rating }: { drill: any; level: number; rating: number | null }) {
+export function CloveChip({ drill, level, rating, lessonReplay = false }: { drill: any; level: number; rating: number | null; lessonReplay?: boolean }) {
   const fit = drillFit(drill, rating);
   const v = cloveValue({ drill, level, rating });
+  if (lessonReplay) {
+    return (
+      <span className="clove-chip fit-core" title="Solving a puzzle after its lesson earns a full clove (twice a day)">
+        <GarlickBulb filled={5} size={12} celebrate={false} />
+        Lesson replay · 1 clove
+      </span>
+    );
+  }
   return (
     <span className={`clove-chip fit-${fit}`} title="Clove value of a solve at your current level (halved if you use hints or takebacks)">
       <GarlickBulb filled={5} size={12} celebrate={false} />

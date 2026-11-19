@@ -32,11 +32,12 @@ interface Props {
   isMaxLevel: boolean;
   onNext: () => void;
   onRetry: () => void;
+  onLesson: () => void;
   onReview: () => void;
   onDrills: () => void;
 }
 
-export default function ResultModal({ drill, level, outcome, result, submitError, durationMs, prevCloves, isMaxLevel, onNext, onRetry, onReview, onDrills }: Props) {
+export default function ResultModal({ drill, level, outcome, result, submitError, durationMs, prevCloves, isMaxLevel, onNext, onRetry, onLesson, onReview, onDrills }: Props) {
   const ok = outcome.success;
   const cloves = result?.day.cloves ?? prevCloves;
   const bulbFull = cloves >= 5 - 1e-9;
@@ -155,14 +156,28 @@ export default function ResultModal({ drill, level, outcome, result, submitError
           </div>
         )}
 
+        {result?.lessonReplay && result.lessonCloveCapped && (
+          <div className="small muted center">Lesson replays already earned 2 cloves today, so this one earns points only.</div>
+        )}
+
         <div className="result-actions">
-          <button className="btn primary big" onClick={onNext} autoFocus>
+          {!ok && (
+            <button className="btn lesson-btn big" onClick={onLesson}>
+              📖 Show me how <small>step-by-step lesson, then replay for a clove</small>
+            </button>
+          )}
+          <button className={`btn ${ok ? 'primary big' : ''}`} onClick={onNext} autoFocus={ok}>
             Next puzzle ▸
           </button>
-          <div className="row gap center">
+          <div className="row gap center wrap">
             {!ok && (
               <button className="btn" onClick={onRetry}>
                 Retry this position
+              </button>
+            )}
+            {ok && (
+              <button className="btn ghost" onClick={onLesson}>
+                See the perfect line
               </button>
             )}
             <button className="btn ghost" onClick={onReview}>

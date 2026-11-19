@@ -19,16 +19,18 @@ export function levelMultiplier(level) {
  * Speed bonus   = up to +50% of base: full at <= half par, half at par, zero at 1.5x par
  * Perfect bonus = +25% if every move kept full pace and no hints/takebacks
  * Only-move     = +5% of base per "only move" found when defending (max +25%)
- * Penalties     = -20% per hint, -25% per takeback
+ * Penalties     = -10% per written hint, -20% per piece hint, -25% per takeback
+ * Lesson replay = the position was just shown in a lesson: half points, no
+ *                 perfect bonus (the clove reward is handled in cloves.js)
  * A solve always earns at least 20% of base. A failed attempt earns 0.
  */
 export function scoreAttempt(a) {
-  const { drill, level, success, durationMs, userMoves, wastePlies = 0, hints = 0, takebacks = 0, onlyMoves = 0, parSeconds } = a;
+  const { drill, level, success, durationMs, userMoves, wastePlies = 0, hints = 0, writtenHints = 0, takebacks = 0, onlyMoves = 0, parSeconds, lessonReplay = false } = a;
   const base = Math.round(drill.basePoints * levelMultiplier(level));
   const eff = drill.goal === 'hold' ? 1 : efficiency(userMoves, wastePlies);
   const seconds = durationMs / 1000;
   const speedFactor = parSeconds > 0 ? clamp(1.5 - seconds / parSeconds, 0, 1) : 0;
-  const perfect = success && eff >= 0.999 && hints === 0 && takebacks === 0;
+  const perfect = success && !lessonReplay && eff >= 0.999 && hints === 0 && writtenHints === 0 && takebacks === 0;
   const breakdown = [];
   if (!success) {
     return { total: 0, base, efficiency: eff, speedFactor, perfect: false, breakdown: [{ label: 'Not solved', points: 0 }] };
@@ -45,13 +47,20 @@ export function scoreAttempt(a) {
   }
   const perfectBonus = perfect ? Math.round(base * 0.25) : 0;
   if (perfect) breakdown.push({ label: 'Perfect play', points: perfectBonus });
+  const writtenPenalty = Math.round(base * 0.1 * writtenHints);
+  if (writtenHints) breakdown.push({ label: `Written hints x${writtenHints}`, points: -writtenPenalty });
   const hintPenalty = Math.round(base * 0.2 * hints);
-  if (hints) breakdown.push({ label: `Hints x${hints}`, points: -hintPenalty });
+  if (hints) breakdown.push({ label: `Piece hints x${hints}`, points: -hintPenalty });
   const takebackPenalty = Math.round(base * 0.25 * takebacks);
   if (takebacks) breakdown.push({ label: `Takebacks x${takebacks}`, points: -takebackPenalty });
-  const raw = base + (drill.goal === 'hold' ? 0 : accuracy) + speed + only + perfectBonus - hintPenalty - takebackPenalty;
+  let raw = base + (drill.goal === 'hold' ? 0 : accuracy) + speed + only + perfectBonus - writtenPenalty - hintPenalty - takebackPenalty;
   const floor = Math.round(base * 0.2);
-  const total = Math.max(floor, raw);
+  let total = Math.max(floor, raw);
+  if (lessonReplay) {
+    const half = Math.round(total / 2);
+    breakdown.push({ label: 'Replay after lesson x1/2', points: half - total });
+    total = half;
+  }
   return { total, base, efficiency: eff, speedFactor, perfect, breakdown };
 }
 

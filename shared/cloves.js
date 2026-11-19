@@ -8,7 +8,9 @@
 //   warm-up  | 500+ above                  | 1/4 clove
 //
 // Level 3 is worth 1.5x and the speed levels (4-5) 2x, capped at one clove,
-// so getting fast at an easy mate still pays. Hints or takebacks halve it.
+// so getting fast at an easy mate still pays. Piece hints or takebacks halve
+// it (written hints don't). Solving a position again right after its lesson
+// earns a full clove, up to LESSON_CLOVES_PER_DAY times a day.
 
 export const DEFAULT_RATING = 1000;
 export const RATING_MIN = 100;
@@ -26,6 +28,7 @@ export const RATING_SOURCES = {
 };
 
 const FIT_VALUE = { core: 1, easy: 0.5, warmup: 0.25 };
+export const LESSON_CLOVES_PER_DAY = 2;
 
 /** 'core' | 'easy' | 'warmup' for this drill at this rating. */
 export function drillFit(drill, rating) {
@@ -40,7 +43,8 @@ export function levelBoost(level) {
 }
 
 /** Clove fraction (0-1) earned by a successful solve. */
-export function cloveValue({ drill, level, rating, hints = 0, takebacks = 0 }) {
+export function cloveValue({ drill, level, rating, hints = 0, takebacks = 0, lessonReplay = false }) {
+  if (lessonReplay) return 1;
   let v = FIT_VALUE[drillFit(drill, rating)] * levelBoost(level);
   if (hints > 0 || takebacks > 0) v *= 0.5;
   return Math.min(1, v);
