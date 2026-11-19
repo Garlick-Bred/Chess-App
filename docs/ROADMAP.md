@@ -4,7 +4,7 @@
 
 * The site is live at https://endgames.garlick.ca (a Workers custom domain:
   free, with an automatic certificate).
-* Family accounts on a public Cloudflare site with an invite code, adult
+* Family accounts on a public Cloudflare site (open sign-up), adult
   profiles with chess rating, and rating-based starting levels.
 * Harder cloves: drills below your level only fill part of one.
 * "Garlick" naming and the cartoon bulb.
@@ -47,7 +47,7 @@ Roughly in order of value for you:
 | Rating sources | Every source (chess.com rapid/blitz, FIDE, CFC, Lichess, guess) is taken at face value | Convert to one scale (chess.com and Lichess run higher than FIDE/CFC at club level) |
 | Bulb | 5 cloves, +50 points, resets at local midnight | Different size or bonus |
 | Leaderboard | Raw points, weekly and all-time; ratings visible to the family | Handicap by rating so everyone can compete |
-| Sign-ups | Anyone with the invite code can create an account | Turn sign-ups off once the family has joined |
+| Sign-ups | Open: anyone who finds the site can create an account (the invite code was removed on request) | Set an `INVITE_CODE` secret again, or close sign-ups once the family has joined |
 | Passwords | At least 8 characters, no email recovery | Admin reset, or email-based reset |
 
 ## Open questions

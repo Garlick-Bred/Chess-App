@@ -37,7 +37,8 @@ solve.
   30-day calendar.
 * **Family accounts** with username, password and chess rating (chess.com,
   Lichess, FIDE, CFC, or a best guess). The rating sets your starting levels and
-  how much each drill fills your bulb. Sign-up needs the family invite code.
+  how much each drill fills your bulb. Sign-up is open; an invite code can be
+  switched on with `INVITE_CODE`.
 * **Chess.com analysis** of your own games, which drives the "Recommended for
   you" cards. See [analysis/](analysis/) and
   [the report for ham_sandmitch](docs/reports/ham_sandmitch-endgames.md).
@@ -58,8 +59,7 @@ solve.
 
 **https://endgames.garlick.ca**: a Cloudflare Worker with a D1 database, on
 Cloudflare's free plan. The same Worker also answers at
-`garlick-endgames.garlick-mitchell.workers.dev`. New accounts need the
-family invite code. Each person picks a username and password, and optionally
+`garlick-endgames.garlick-mitchell.workers.dev`. Sign-up is open: each person picks a username and password, and optionally
 their chess rating.
 
 ## Run it locally
