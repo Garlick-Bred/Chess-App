@@ -7,6 +7,21 @@ const fs = require('fs');
 
 const OUT = process.argv[2] || 'docs/screenshots';
 const BASE = process.argv[3] || 'http://localhost:8787';
+const INVITE = process.env.INVITE_CODE || '';
+
+async function register(page, username, displayName, password, fillRating) {
+  await page.waitForSelector('.auth-card');
+  const newTab = await page.$('button:has-text("New account")');
+  if (newTab) await newTab.click();
+  await page.fill('input[autocomplete=username]', username);
+  await page.fill('input[placeholder="What the family sees"]', displayName);
+  await page.fill('input[type=password]', password);
+  await fillRating(page);
+  const invite = await page.$('label:has-text("Family invite code") input');
+  if (invite) await invite.fill(INVITE);
+  await page.click('button:has-text("Create account")');
+  await page.waitForSelector('.hero');
+}
 fs.mkdirSync(OUT, { recursive: true });
 const errors = [];
 
@@ -16,7 +31,9 @@ async function tbMoves(fen) {
 }
 
 async function center(page, sq) {
-  const b = await (await page.$(`[data-square="${sq}"]`)).boundingBox();
+  const el = await page.$(`[data-square="${sq}"]`);
+  await el.scrollIntoViewIfNeeded();
+  const b = await el.boundingBox();
   return { x: b.x + b.width / 2, y: b.y + b.height / 2 };
 }
 
@@ -102,11 +119,11 @@ async function solve(page, drill, opts = {}) {
   await page.waitForSelector('.auth-card');
   await page.waitForTimeout(300);
   await page.screenshot({ path: `${OUT}/01-login.png` });
-  await page.fill('input[autocomplete=username]', 'mitch');
-  await page.fill('input[placeholder="What the family sees"]', 'Mitch');
-  await page.fill('input[type=password]', 'garlick123');
-  await page.click('button:has-text("Create account")');
-  await page.waitForSelector('.hero');
+  await register(page, 'mitch', 'Mitch', 'garlick123', async (p) => {
+    await p.fill('input[aria-label="Chess rating"]', '1300');
+    await p.selectOption('select[aria-label="Where the rating is from"]', 'chesscom-rapid');
+    await p.screenshot({ path: `${OUT}/01b-signup-rating.png` });
+  });
   await page.waitForTimeout(400);
   await page.screenshot({ path: `${OUT}/02-home-new.png` });
   // Link the chess.com account so the home page shows the game-based insights.
@@ -123,18 +140,20 @@ async function solve(page, drill, opts = {}) {
   await page.waitForTimeout(400);
   await page.screenshot({ path: `${OUT}/04-drill-detail.png` });
 
-  // 1: rook mate, tapping + dragging, with a selection screenshot and a mid-game shot
+  // Rated 1300: rook mate is a warm-up (starts at level 3, worth 3/8 clove).
   await solve(page, 'krk', { drag: true, selectShot: '05-play-selected.png', midShot: '06-play-graded.png', midShotAt: 3 });
   await page.waitForTimeout(2300);
   await page.screenshot({ path: `${OUT}/08-result-clove.png` });
 
-  // 2: queen mate with a deliberate blunder + takeback
+  // Queen mate with a deliberate blunder + takeback (halves its clove value).
   await solve(page, 'kqk', { blunderAt: 1, blunderShot: '07-blunder.png' });
-  // 3-4: more cloves
+  // Drills at or near your level fill whole cloves.
   await solve(page, 'kpk-draw', { drag: true });
   await solve(page, 'lucena', {});
-  // 5: completes the bulb - capture the celebration
-  await solve(page, 'krrk', { drag: true });
+  await solve(page, 'philidor', { drag: true });
+  await solve(page, 'kqkp', {});
+  // This one completes the bulb - capture the celebration.
+  await solve(page, 'kbbk', { drag: true });
   await page.waitForTimeout(2000);
   await page.screenshot({ path: `${OUT}/09-bulb-celebrating.png` });
   await page.waitForTimeout(1600);
@@ -156,13 +175,9 @@ async function solve(page, drill, opts = {}) {
   const p2 = await phone.newPage();
   p2.on('pageerror', (e) => errors.push(`phone pageerror: ${e.message}`));
   await p2.goto(BASE);
-  await p2.waitForSelector('.auth-card');
-  await p2.click('button:has-text("New account")');
-  await p2.fill('input[autocomplete=username]', 'grandma');
-  await p2.fill('input[placeholder="What the family sees"]', 'Grandma');
-  await p2.fill('input[type=password]', 'knitting1');
-  await p2.click('button:has-text("Create account")');
-  await p2.waitForSelector('.hero');
+  await register(p2, 'grandma', 'Grandma', 'knitting1', async (p) => {
+    await p.click('button.preset:has-text("Casual")');
+  });
   await p2.screenshot({ path: `${OUT}/14-phone-home.png` });
   await solve(p2, 'kqk', { midShot: '15-phone-play.png', midShotAt: 2 });
   await p2.waitForTimeout(2300);

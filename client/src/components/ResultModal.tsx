@@ -3,6 +3,7 @@ import type { AttemptResult } from '../api';
 import { sfx } from '../sound';
 import GarlickBulb from './GarlickBulb';
 import { fmtTime, AchIcon } from './ui';
+import { formatCloves } from '@shared/cloves.js';
 
 function CountUp({ to, ms = 900 }: { to: number; ms?: number }) {
   const [v, setV] = useState(0);
@@ -38,7 +39,7 @@ interface Props {
 export default function ResultModal({ drill, level, outcome, result, submitError, durationMs, prevCloves, isMaxLevel, onNext, onRetry, onReview, onDrills }: Props) {
   const ok = outcome.success;
   const cloves = result?.day.cloves ?? prevCloves;
-  const bulbFull = cloves >= 5;
+  const bulbFull = cloves >= 5 - 1e-9;
   const gotClove = ok && result && cloves > prevCloves && prevCloves < 5;
 
   return (
@@ -57,7 +58,7 @@ export default function ResultModal({ drill, level, outcome, result, submitError
                 filled={Math.min(5, cloves)}
                 from={gotClove ? Math.min(5, prevCloves) : undefined}
                 size={128}
-                onClove={(n) => (n >= 5 ? sfx.bulb() : sfx.clove())}
+                onClove={(n, completed) => (n >= 5 - 1e-9 ? sfx.bulb() : completed ? sfx.clove() : sfx.cloveSmall())}
               />
             ) : (
               <GarlickBulb key="pending" filled={Math.min(5, prevCloves)} size={128} celebrate={false} />
@@ -69,7 +70,8 @@ export default function ResultModal({ drill, level, outcome, result, submitError
                 <span>Today's bulb is full - keep going for points</span>
               ) : (
                 <span>
-                  Clove {Math.min(5, cloves)} of 5 today
+                  {result && result.cloveGain > 0 && <b className="clove-gain">+{formatCloves(result.cloveGain)} clove · </b>}
+                  {formatCloves(Math.min(5, cloves))} of 5 today
                 </span>
               )}
             </div>

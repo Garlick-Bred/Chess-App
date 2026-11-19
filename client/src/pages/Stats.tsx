@@ -5,6 +5,7 @@ import { api, localDay } from '../api';
 import { useApp } from '../App';
 import { Material, Sparkline, Stars } from '../components/ui';
 import GarlickBulb from '../components/GarlickBulb';
+import { formatCloves } from '@shared/cloves.js';
 
 interface Stats {
   perDrill: { drillId: string; attempts: number; solves: number; successRate: number; efficiency: number | null; avgSecondsPerMove: number | null; bestSecondsPerMove: number | null; points: number }[];
@@ -41,7 +42,7 @@ export default function StatsPage() {
           {calendar.map((d) => {
             const c = dayMap.get(d)?.cloves ?? 0;
             return (
-              <div key={d} className={`cal-day c${Math.min(5, c)} ${dayMap.get(d)?.bulb_done ? 'full' : ''}`} title={`${d}: ${c} clove${c === 1 ? '' : 's'}`}>
+              <div key={d} className={`cal-day c${Math.min(5, Math.ceil(c - 1e-9))} ${dayMap.get(d)?.bulb_done ? 'full' : ''}`} title={`${d}: ${formatCloves(c)} clove${c === 1 ? '' : 's'}`}>
                 {dayMap.get(d)?.bulb_done ? <GarlickBulb filled={5} size={14} celebrate={false} /> : null}
               </div>
             );

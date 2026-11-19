@@ -1770,3 +1770,84 @@ button.card:hover {
   color: #d9d2c9;
   line-height: 1.5;
 }
+.clove.partial .clove-detail {
+  opacity: 0.5;
+}
+.clove.partial .clove-liquid {
+  animation: wave 0.9s linear 2;
+}
+
+/* ---------- rating field ---------- */
+.rating-field .row input {
+  width: 120px;
+  flex: none;
+}
+.rating-field select,
+.form select {
+  background: var(--bg-2);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 11px 10px;
+  color: var(--text);
+  font: inherit;
+  font-size: 16px;
+  flex: 1;
+  min-width: 0;
+}
+.form input[type='number'] {
+  background: var(--bg-2);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 11px 12px;
+  color: var(--text);
+  font: inherit;
+  font-size: 16px;
+}
+.presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.preset {
+  border: 1px solid var(--line);
+  background: var(--card-2);
+  color: var(--text);
+  border-radius: 16px;
+  padding: 5px 10px;
+  font: inherit;
+  font-size: 0.82rem;
+  cursor: pointer;
+}
+.preset small {
+  color: var(--muted);
+}
+.preset.on {
+  border-color: var(--green);
+  box-shadow: 0 0 0 1px var(--green);
+}
+
+/* ---------- clove value chip ---------- */
+.clove-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 2px 8px 2px 4px;
+  border-radius: 10px;
+  background: rgba(236, 220, 190, 0.12);
+  color: #e9dcc3;
+  align-self: flex-start;
+  white-space: nowrap;
+}
+.clove-chip.fit-warmup {
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--muted);
+}
+.clove-chip.fit-core {
+  background: rgba(129, 182, 76, 0.18);
+  color: #b9e08f;
+}
+.clove-gain {
+  color: var(--yellow);
+}

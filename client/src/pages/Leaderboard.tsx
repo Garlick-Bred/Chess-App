@@ -18,6 +18,8 @@ interface Board {
     bulbs: number;
     todayCloves: number;
     rank: string;
+    rating: number | null;
+    ratingSource: string | null;
   }[];
   records: Record<string, { name: string; avatar: string; secondsPerMove: number }>;
 }
@@ -53,7 +55,8 @@ export default function LeaderboardPage() {
               <b>{p.displayName}</b>
               <small className="muted">
                 {' '}
-                · {p.rank} · {p.solves} solve{p.solves === 1 ? '' : 's'}
+                · {p.rating ? `${p.rating} · ` : ''}
+                {p.rank} · {p.solves} solve{p.solves === 1 ? '' : 's'}
               </small>
             </span>
             <span title={`${p.todayCloves}/5 cloves today`}>

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { api } from '../api';
+import { api, type Config } from '../api';
+import RatingField, { DEFAULT_SOURCES } from '../components/RatingField';
 import { useApp } from '../App';
 
 const COLORS = ['#81b64c', '#e8b33a', '#e07b39', '#d64545', '#9b59b6', '#3d9be9', '#26c2a3', '#8d6e63'];
@@ -18,13 +19,19 @@ export default function SettingsPage() {
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [avatars, setAvatars] = useState<string[]>([]);
+  const [rating, setRating] = useState(me.user.rating != null ? String(me.user.rating) : '');
+  const [ratingSource, setRatingSource] = useState(me.user.ratingSource ?? 'chesscom-rapid');
+  const [sources, setSources] = useState<Record<string, string>>(DEFAULT_SOURCES);
   const [msg, setMsg] = useState('');
   const [err, setErr] = useState('');
 
   useEffect(() => {
     api
-      .get<{ avatars: string[] }>('/api/config')
-      .then((c) => setAvatars(c.avatars))
+      .get<Config>('/api/config')
+      .then((c) => {
+        setAvatars(c.avatars);
+        if (c.ratingSources) setSources(c.ratingSources);
+      })
       .catch(() => undefined);
   }, []);
 
@@ -33,7 +40,20 @@ export default function SettingsPage() {
     setMsg('');
     setErr('');
     try {
-      await api.put('/api/me', { displayName, avatar, color, playAs, sound, coordinates, autoQueen, chesscom, currentPassword, newPassword });
+      await api.put('/api/me', {
+        displayName,
+        avatar,
+        color,
+        playAs,
+        sound,
+        coordinates,
+        autoQueen,
+        chesscom,
+        currentPassword,
+        newPassword,
+        rating: rating.trim() ? Number(rating) : null,
+        ratingSource,
+      });
       setCurrentPassword('');
       setNewPassword('');
       await refresh();
@@ -71,6 +91,18 @@ export default function SettingsPage() {
           </div>
         </div>
 
+        <h3>Chess strength</h3>
+        <RatingField
+          rating={rating}
+          source={ratingSource}
+          sources={sources}
+          onChange={(r, s) => {
+            setRating(r);
+            setRatingSource(s);
+          }}
+        />
+        <small className="muted">Changing it moves drills you haven't played yet to the right starting level.</small>
+
         <h3>Board</h3>
         <div className="field">
           <span>Play as</span>
@@ -105,7 +137,7 @@ export default function SettingsPage() {
         </label>
         <label>
           New password
-          <input type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} autoComplete="new-password" minLength={6} />
+          <input type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} autoComplete="new-password" minLength={8} />
         </label>
 
         {err && <div className="form-error">{err}</div>}

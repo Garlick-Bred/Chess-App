@@ -10,3 +10,4 @@ analysis/venv/
 test-results/
 playwright-report/
 scripts/.cache/
+.deploy/

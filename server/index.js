@@ -1,176 +1,89 @@
-// Garlick Endgames server: accounts, attempts/scoring, leaderboard, a caching
-// tablebase proxy, and the built client.
+// Local / self-hosted server: the shared fetch-style API on node:sqlite, plus
+// the built client from client/dist. (On Cloudflare, worker/index.js plays
+// this role with D1.)
 import fs from 'node:fs';
+import http from 'node:http';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import express from 'express';
-import { openDb } from './db.js';
-import * as auth from './auth.js';
-import { lookup, validFen } from './tablebase.js';
-import { recordAttempt, getProgress, getTotals, getDay, getAchievements, getStats, getLeaderboard, httpError } from './game.js';
+import { createApi } from './api.js';
+import { createNodeStore } from './store-node.js';
 
 const ROOT = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 const PORT = Number(process.env.PORT ?? 8787);
 const DB_FILE = process.env.DB_FILE ?? path.join(ROOT, 'data', 'garlick.db');
-const INVITE_CODE = process.env.INVITE_CODE ?? '';
-const SECURE_COOKIES = process.env.COOKIE_SECURE === '1';
-const AVATARS = ['🧄', '♞', '♛', '♜', '♝', '♚', '🦉', '🐢', '🦊', '🐼', '🐸', '🦁', '🐙', '🌶️', '🍄', '🌟'];
-const DAY_RE = /^\d{4}-\d{2}-\d{2}$/;
+const DIST = path.join(ROOT, 'client', 'dist');
+const TYPES = {
+  '.html': 'text/html; charset=utf-8',
+  '.js': 'text/javascript; charset=utf-8',
+  '.css': 'text/css; charset=utf-8',
+  '.svg': 'image/svg+xml',
+  '.json': 'application/json',
+  '.png': 'image/png',
+  '.ico': 'image/x-icon',
+  '.webmanifest': 'application/manifest+json',
+};
+const FORWARD_HEADERS = ['cookie', 'content-type', 'content-length', 'accept', 'user-agent'];
 
-export function createApp({ db = openDb(DB_FILE) } = {}) {
-  const app = express();
-  app.set('trust proxy', 1);
-  app.use(express.json({ limit: '64kb' }));
-
-  // Attach the logged-in user (if any).
-  app.use((req, _res, next) => {
-    req.token = auth.parseCookies(req.headers.cookie)[auth.COOKIE];
-    req.user = auth.sessionUser(db, req.token);
-    next();
+function readBody(req) {
+  return new Promise((resolve, reject) => {
+    const chunks = [];
+    req.on('data', (c) => chunks.push(c));
+    req.on('end', () => resolve(Buffer.concat(chunks)));
+    req.on('error', reject);
   });
-  const requireUser = (req, _res, next) => (req.user ? next() : next(httpError(401, 'Please log in')));
-  const today = (req) => (DAY_RE.test(req.query.day ?? '') ? req.query.day : new Date().toISOString().slice(0, 10));
-  const cookie = (req, token) => auth.sessionCookie(token, { secure: SECURE_COOKIES || req.secure });
-
-  app.get('/api/health', (_req, res) => res.json({ ok: true }));
-  app.get('/api/config', (_req, res) => res.json({ inviteRequired: !!INVITE_CODE, avatars: AVATARS }));
-
-  app.post('/api/auth/register', (req, res, next) => {
-    try {
-      const { username, password, displayName, inviteCode } = req.body ?? {};
-      if (INVITE_CODE && inviteCode !== INVITE_CODE) throw httpError(403, 'That family invite code is not right.');
-      if (!auth.USERNAME_RE.test(username ?? '')) throw httpError(400, 'Username: 3-20 letters, numbers, _ or -');
-      if (typeof password !== 'string' || password.length < 6) throw httpError(400, 'Password must be at least 6 characters');
-      const name = String(displayName || username).trim().slice(0, 24);
-      if (db.prepare('SELECT 1 FROM users WHERE username = ?').get(username)) throw httpError(409, 'That username is taken');
-      const avatar = AVATARS[Math.floor(Math.random() * AVATARS.length)];
-      const r = db
-        .prepare('INSERT INTO users (username, display_name, password_hash, avatar, created_at) VALUES (?, ?, ?, ?, ?)')
-        .run(username, name, auth.hashPassword(password), avatar, Date.now());
-      const token = auth.createSession(db, Number(r.lastInsertRowid));
-      res.setHeader('Set-Cookie', cookie(req, token));
-      res.json({ ok: true });
-    } catch (e) {
-      next(e);
-    }
-  });
-
-  app.post('/api/auth/login', (req, res, next) => {
-    try {
-      const { username, password } = req.body ?? {};
-      const key = String(username ?? '').toLowerCase();
-      if (auth.throttled(key)) throw httpError(429, 'Too many attempts. Try again in a few minutes.');
-      const user = db.prepare('SELECT * FROM users WHERE username = ?').get(String(username ?? ''));
-      if (!user || !auth.verifyPassword(String(password ?? ''), user.password_hash)) {
-        auth.recordFailure(key);
-        throw httpError(401, 'Wrong username or password');
-      }
-      auth.clearFailures(key);
-      const token = auth.createSession(db, user.id);
-      res.setHeader('Set-Cookie', cookie(req, token));
-      res.json({ ok: true });
-    } catch (e) {
-      next(e);
-    }
-  });
-
-  app.post('/api/auth/logout', (req, res) => {
-    auth.destroySession(db, req.token);
-    res.setHeader('Set-Cookie', auth.clearCookie());
-    res.json({ ok: true });
-  });
-
-  app.get('/api/me', requireUser, (req, res) => {
-    const day = today(req);
-    res.json({
-      user: publicUser(req.user),
-      totals: getTotals(db, req.user.id, day),
-      today: getDay(db, req.user.id, day),
-      progress: getProgress(db, req.user.id),
-    });
-  });
-
-  app.put('/api/me', requireUser, (req, res, next) => {
-    try {
-      const b = req.body ?? {};
-      const settings = { ...JSON.parse(req.user.settings || '{}') };
-      if (['white', 'black', 'random'].includes(b.playAs)) settings.playAs = b.playAs;
-      if (typeof b.sound === 'boolean') settings.sound = b.sound;
-      if (typeof b.coordinates === 'boolean') settings.coordinates = b.coordinates;
-      if (typeof b.autoQueen === 'boolean') settings.autoQueen = b.autoQueen;
-      if (typeof b.chesscom === 'string') settings.chesscom = b.chesscom.trim().slice(0, 40);
-      const name = typeof b.displayName === 'string' && b.displayName.trim() ? b.displayName.trim().slice(0, 24) : req.user.display_name;
-      const avatar = AVATARS.includes(b.avatar) ? b.avatar : req.user.avatar;
-      const color = /^#[0-9a-fA-F]{6}$/.test(b.color ?? '') ? b.color : req.user.color;
-      db.prepare('UPDATE users SET display_name = ?, avatar = ?, color = ?, settings = ? WHERE id = ?').run(
-        name,
-        avatar,
-        color,
-        JSON.stringify(settings),
-        req.user.id,
-      );
-      if (typeof b.newPassword === 'string' && b.newPassword) {
-        if (b.newPassword.length < 6) throw httpError(400, 'Password must be at least 6 characters');
-        if (!auth.verifyPassword(String(b.currentPassword ?? ''), req.user.password_hash)) throw httpError(403, 'Current password is wrong');
-        db.prepare('UPDATE users SET password_hash = ? WHERE id = ?').run(auth.hashPassword(b.newPassword), req.user.id);
-      }
-      res.json({ user: publicUser(db.prepare('SELECT * FROM users WHERE id = ?').get(req.user.id)) });
-    } catch (e) {
-      next(e);
-    }
-  });
-
-  app.post('/api/attempts', requireUser, (req, res, next) => {
-    try {
-      res.json(recordAttempt(db, req.user, req.body ?? {}));
-    } catch (e) {
-      next(e);
-    }
-  });
-
-  app.get('/api/stats', requireUser, (req, res) => res.json(getStats(db, req.user.id, today(req))));
-  app.get('/api/achievements', requireUser, (req, res) => res.json(getAchievements(db, req.user.id)));
-  app.get('/api/leaderboard', requireUser, (req, res) => res.json(getLeaderboard(db, today(req))));
-
-  app.get('/api/tablebase', async (req, res, next) => {
-    try {
-      const fen = String(req.query.fen ?? '');
-      if (!validFen(fen)) throw httpError(400, 'Bad FEN (max 7 pieces)');
-      res.setHeader('Cache-Control', 'private, max-age=86400');
-      res.json(await lookup(db, fen));
-    } catch (e) {
-      next(e.status ? e : httpError(502, `Tablebase unavailable: ${e.message}`));
-    }
-  });
-
-  // Built client (npm run build) - single-page app.
-  const dist = path.join(ROOT, 'client', 'dist');
-  if (fs.existsSync(dist)) {
-    app.use(express.static(dist, { index: false, maxAge: '1h' }));
-    app.get(/^\/(?!api\/).*/, (_req, res) => res.sendFile(path.join(dist, 'index.html')));
-  }
-
-  app.use((err, _req, res, _next) => {
-    const status = err.status ?? 500;
-    if (status >= 500) console.error(err);
-    res.status(status).json({ error: err.message ?? 'Server error' });
-  });
-  return app;
 }
 
-function publicUser(u) {
-  const settings = JSON.parse(u.settings || '{}');
-  return {
-    id: u.id,
-    username: u.username,
-    displayName: u.display_name,
-    avatar: u.avatar,
-    color: u.color,
-    settings: { playAs: 'random', sound: true, coordinates: true, autoQueen: false, ...settings },
-  };
+function serveStatic(req, res) {
+  const urlPath = decodeURIComponent(new URL(req.url, 'http://x').pathname);
+  let file = path.normalize(path.join(DIST, urlPath));
+  if (!file.startsWith(DIST) || !fs.existsSync(file) || fs.statSync(file).isDirectory()) file = path.join(DIST, 'index.html');
+  if (!fs.existsSync(file)) {
+    res.writeHead(404, { 'Content-Type': 'text/plain' });
+    res.end('Client not built. Run: npm run build');
+    return;
+  }
+  const immutable = file.includes(`${path.sep}assets${path.sep}`);
+  res.writeHead(200, {
+    'Content-Type': TYPES[path.extname(file)] ?? 'application/octet-stream',
+    'Cache-Control': immutable ? 'public, max-age=31536000, immutable' : 'no-cache',
+  });
+  fs.createReadStream(file).pipe(res);
+}
+
+export function createServer({ store = createNodeStore(DB_FILE), env = process.env } = {}) {
+  const handle = createApi({ store, env });
+  return http.createServer(async (req, res) => {
+    try {
+      if (req.url.startsWith('/api/')) {
+        const proto = req.headers['x-forwarded-proto'] === 'https' ? 'https' : 'http';
+        const headers = new Headers();
+        for (const h of FORWARD_HEADERS) if (req.headers[h]) headers.set(h, String(req.headers[h]));
+        const hasBody = !['GET', 'HEAD'].includes(req.method);
+        const request = new Request(`${proto}://${req.headers.host ?? 'localhost'}${req.url}`, {
+          method: req.method,
+          headers,
+          body: hasBody ? await readBody(req) : undefined,
+        });
+        const response = await handle(request);
+        const out = {};
+        response.headers.forEach((v, k) => {
+          if (k !== 'set-cookie') out[k] = v;
+        });
+        const cookies = response.headers.getSetCookie();
+        if (cookies.length) out['set-cookie'] = cookies;
+        res.writeHead(response.status, out);
+        res.end(Buffer.from(await response.arrayBuffer()));
+        return;
+      }
+      serveStatic(req, res);
+    } catch (e) {
+      console.error(e);
+      if (!res.headersSent) res.writeHead(500, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'Server error' }));
+    }
+  });
 }
 
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
-  const app = createApp();
-  app.listen(PORT, () => console.log(`Garlick Endgames listening on http://localhost:${PORT}`));
+  createServer().listen(PORT, () => console.log(`Garlick Endgames listening on http://localhost:${PORT}`));
 }

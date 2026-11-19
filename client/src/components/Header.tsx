@@ -48,6 +48,7 @@ export default function Header({ route }: { route: Route }) {
               <b>{me.user.displayName}</b>
               <small>
                 @{me.user.username} · {me.totals.rank.name}
+                {me.user.rating ? ` · ${me.user.rating}` : ''}
               </small>
             </div>
             <button

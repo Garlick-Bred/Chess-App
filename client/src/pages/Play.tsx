@@ -4,12 +4,15 @@ import { useApp, go } from '../App';
 import { useDrill } from '../game/useDrill';
 import Board from '../components/Board';
 import ResultModal from '../components/ResultModal';
-import { Material, TierChip, fmtClock } from '../components/ui';
+import { Material, TierChip, fmtClock, CloveChip } from '../components/ui';
+import { drillFit } from '@shared/cloves.js';
 
-/** Random mode: favour drills you have not mastered, a bit less of the very hard ones. */
-function pickRandomDrill(progress: Record<string, { stars: number }>, exclude?: string): string {
+const FIT_WEIGHT: Record<string, number> = { core: 1, easy: 0.6, warmup: 0.25 };
+
+/** Random mode: favour drills at your level that you have not mastered. */
+function pickRandomDrill(progress: Record<string, { stars: number }>, rating: number | null, exclude?: string): string {
   const pool = DRILLS.filter((d: any) => d.id !== exclude);
-  const weights = pool.map((d: any) => (6 - (progress[d.id]?.stars ?? 0)) * (d.tier <= 2 ? 1 : d.tier === 3 ? 0.8 : 0.5));
+  const weights = pool.map((d: any) => (6 - (progress[d.id]?.stars ?? 0)) * FIT_WEIGHT[drillFit(d, rating)] * (d.tier === 4 && drillFit(d, rating) === 'core' ? 0.6 : 1));
   let r = Math.random() * weights.reduce((a: number, b: number) => a + b, 0);
   for (let i = 0; i < pool.length; i++) {
     r -= weights[i];
@@ -23,7 +26,7 @@ export default function PlayPage({ drillId, levelParam }: { drillId: string; lev
   const random = drillId === 'random';
   const [round, setRound] = useState(0);
   const actualId = useMemo(
-    () => (random ? pickRandomDrill(me.progress) : drillId),
+    () => (random ? pickRandomDrill(me.progress, me.user.rating) : drillId),
     // a new random drill each round
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [drillId, round],
@@ -180,6 +183,9 @@ function Session({ drillId, level, random, onNext }: { drillId: string; level: n
               <h2>{drill.name}</h2>
             </div>
             <Material drillId={drill.id} size={20} />
+          </div>
+          <div style={{ marginTop: 6 }}>
+            <CloveChip drill={drill} level={level} rating={me.user.rating} />
           </div>
           <div className="goal">
             <span className={`side-dot ${view.userColor}`} />

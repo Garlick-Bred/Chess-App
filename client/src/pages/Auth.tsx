@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { api } from '../api';
+import { api, type Config } from '../api';
+import RatingField, { DEFAULT_SOURCES } from '../components/RatingField';
 import { recentAccounts } from '../App';
 import GarlickBulb from '../components/GarlickBulb';
 
@@ -10,14 +11,20 @@ export default function AuthPage({ onDone }: { onDone: () => Promise<void> }) {
   const [password, setPassword] = useState('');
   const [invite, setInvite] = useState('');
   const [inviteRequired, setInviteRequired] = useState(false);
+  const [rating, setRating] = useState('');
+  const [ratingSource, setRatingSource] = useState('chesscom-rapid');
+  const [sources, setSources] = useState<Record<string, string>>(DEFAULT_SOURCES);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
   const accounts = recentAccounts();
 
   useEffect(() => {
     api
-      .get<{ inviteRequired: boolean }>('/api/config')
-      .then((c) => setInviteRequired(c.inviteRequired))
+      .get<Config>('/api/config')
+      .then((c) => {
+        setInviteRequired(c.inviteRequired);
+        if (c.ratingSources) setSources(c.ratingSources);
+      })
       .catch(() => undefined);
   }, []);
 
@@ -27,7 +34,15 @@ export default function AuthPage({ onDone }: { onDone: () => Promise<void> }) {
     setBusy(true);
     try {
       if (mode === 'login') await api.post('/api/auth/login', { username, password });
-      else await api.post('/api/auth/register', { username, password, displayName, inviteCode: invite });
+      else
+        await api.post('/api/auth/register', {
+          username,
+          password,
+          displayName,
+          inviteCode: invite,
+          rating: rating.trim() ? Number(rating) : null,
+          ratingSource,
+        });
       await onDone();
     } catch (err: any) {
       setError(err.message);
@@ -44,7 +59,7 @@ export default function AuthPage({ onDone }: { onDone: () => Promise<void> }) {
           <h1>
             Garlick <b>Endgames</b>
           </h1>
-          <p className="muted">Drill the endgames that decide your games. Fill a clove with every solve.</p>
+          <p className="muted">Drill the endgames that decide your games. Fill your Garlick bulb with drills at your level.</p>
         </div>
 
         {mode === 'login' && accounts.length > 0 && (
@@ -86,9 +101,20 @@ export default function AuthPage({ onDone }: { onDone: () => Promise<void> }) {
               onChange={(e) => setPassword(e.target.value)}
               autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
               required
-              minLength={6}
+              minLength={mode === 'register' ? 8 : 1}
             />
           </label>
+          {mode === 'register' && (
+            <RatingField
+              rating={rating}
+              source={ratingSource}
+              sources={sources}
+              onChange={(r, s) => {
+                setRating(r);
+                setRatingSource(s);
+              }}
+            />
+          )}
           {mode === 'register' && inviteRequired && (
             <label>
               Family invite code

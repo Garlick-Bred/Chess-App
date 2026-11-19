@@ -2,6 +2,21 @@ import { TIERS, MAX_LEVEL } from '@shared/drills.js';
 import bank from '@shared/puzzles.json';
 import { PIECE_IMG } from './Board';
 import GarlickBulb from './GarlickBulb';
+import { cloveValue, drillFit, formatCloves } from '@shared/cloves.js';
+
+const FIT_LABEL: Record<string, string> = { warmup: 'Warm-up', easy: 'Easy for you', core: 'Your level' };
+
+/** What a solve of this drill is worth to this player, e.g. "Warm-up · ¼ clove". */
+export function CloveChip({ drill, level, rating }: { drill: any; level: number; rating: number | null }) {
+  const fit = drillFit(drill, rating);
+  const v = cloveValue({ drill, level, rating });
+  return (
+    <span className={`clove-chip fit-${fit}`} title="Clove value of a solve at your current level (halved if you use hints or takebacks)">
+      <GarlickBulb filled={5} size={12} celebrate={false} />
+      {FIT_LABEL[fit]} · {formatCloves(v)} clove
+    </span>
+  );
+}
 
 /** Badge icon: 'garlick-N' draws a Garlick bulb with N cloves, otherwise an emoji. */
 export function AchIcon({ icon, size = 40 }: { icon: string; size?: number }) {

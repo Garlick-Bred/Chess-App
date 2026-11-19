@@ -73,6 +73,7 @@ export const sfx = {
     tone(660, 0, 0.12, 'sine', 0.1);
     tone(990, 0.08, 0.25, 'sine', 0.08);
   },
+  cloveSmall: () => tone(740, 0, 0.14, 'sine', 0.07),
   bulb: () => [523, 659, 784, 1047, 1319, 1568].forEach((f, i) => tone(f, i * 0.07, 0.5, 'triangle', 0.07)),
   tick: () => tone(1500, 0, 0.03, 'square', 0.02),
 };

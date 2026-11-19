@@ -2,7 +2,7 @@
   "name": "garlick-endgames",
   "private": true,
   "version": "0.1.0",
-  "description": "Endgame drill trainer with tablebase-graded moves, family accounts and a daily Garlick bulb.",
+  "description": "Endgame drill trainer with tablebase-graded moves, family accounts and a daily Garlick bulb. Runs on Node or Cloudflare Workers + D1.",
   "type": "module",
   "engines": {
     "node": ">=22.13"
@@ -12,14 +12,14 @@
     "dev:server": "node --watch server/index.js",
     "dev:client": "vite --config client/vite.config.ts",
     "build": "vite build --config client/vite.config.ts",
-    "start": "node server/index.js",
+    "start": "node --disable-warning=ExperimentalWarning server/index.js",
     "test": "vitest run",
     "typecheck": "tsc -p client/tsconfig.json --noEmit",
-    "puzzles": "node scripts/generate-puzzles.mjs"
+    "puzzles": "node scripts/generate-puzzles.mjs",
+    "deploy": "node scripts/deploy-cloudflare.mjs"
   },
   "dependencies": {
-    "chess.js": "^1.4.0",
-    "express": "^4.21.2"
+    "chess.js": "^1.4.0"
   },
   "devDependencies": {
     "@types/react": "^18.3.12",
@@ -29,6 +29,7 @@
     "react-dom": "^18.3.1",
     "typescript": "^5.7.2",
     "vite": "^6.0.7",
-    "vitest": "^2.1.8"
+    "vitest": "^2.1.8",
+    "esbuild": "^0.25.0"
   }
 }

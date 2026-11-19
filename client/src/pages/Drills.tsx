@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { DRILLS, DRILL_BY_ID, TIERS, MAX_LEVEL } from '@shared/drills.js';
 import { go, useApp } from '../App';
-import { Material, Stars, TierChip, LevelDots } from '../components/ui';
+import { Material, Stars, TierChip, LevelDots, CloveChip } from '../components/ui';
 
 const GOAL_LABEL: Record<string, string> = {
   mate: 'Checkmate',
@@ -39,6 +39,7 @@ export default function DrillsPage({ open }: { open?: string }) {
                     <span className="goal-chip">{GOAL_LABEL[d.goal]}</span>
                   </div>
                   <b className="drill-name">{d.name}</b>
+                  <CloveChip drill={d} level={p?.level ?? 1} rating={me.user.rating} />
                   <span className="small muted">{d.summary}</span>
                   <span className="row between drill-foot">
                     <Stars n={p?.stars ?? 0} />
@@ -78,6 +79,9 @@ function DrillDetail({ drill, onClose }: { drill: any; onClose: () => void }) {
         </div>
         <h2>{drill.name}</h2>
         <Material drillId={drill.id} size={30} />
+        <div style={{ marginTop: 8 }}>
+          <CloveChip drill={drill} level={level} rating={me.user.rating} />
+        </div>
         <p className="muted">{drill.material}</p>
         <h4>How to win this</h4>
         <ul className="tip-list">

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { DRILLS, DRILL_BY_ID } from '@shared/drills.js';
 import { BULB_BONUS } from '@shared/scoring.js';
 import insights from '@shared/insights.json';
+import { drillFit, formatCloves } from '@shared/cloves.js';
 import { api, localDay } from '../api';
 import { go, useApp } from '../App';
 import GarlickBulb from '../components/GarlickBulb';
@@ -19,20 +20,22 @@ interface Rec {
   why: string;
 }
 
-function recommendations(progress: Record<string, any>, chesscom?: string): Rec[] {
+function recommendations(progress: Record<string, any>, chesscom: string | undefined, rating: number | null): Rec[] {
   const out: Rec[] = [];
   const add = (r: Rec) => {
     if (DRILL_BY_ID[r.drillId] && !out.some((o) => o.drillId === r.drillId)) out.push(r);
   };
   const player = chesscom ? (insights as any).players?.[chesscom.toLowerCase()] : null;
   for (const r of player?.recommended ?? []) add({ drillId: r.drillId, why: `From your chess.com games: ${r.reason}` });
-  const next = DRILLS.find((d: any) => (progress[d.id]?.stars ?? 0) < 3);
+  // Skip warm-ups: drills far below the player's rating aren't the next step.
+  const atLevel = DRILLS.filter((d: any) => drillFit(d, rating) !== 'warmup');
+  const next = atLevel.find((d: any) => (progress[d.id]?.stars ?? 0) < 3);
   if (next) add({ drillId: next.id, why: progress[next.id]?.solves ? 'Your next step on the path - get it to level 3.' : 'Next fundamental to learn.' });
-  const weak = DRILLS.filter((d: any) => (progress[d.id]?.attempts ?? 0) >= 3)
+  const weak = atLevel.filter((d: any) => (progress[d.id]?.attempts ?? 0) >= 3)
     .map((d: any) => ({ d, rate: progress[d.id].solves / progress[d.id].attempts }))
     .sort((a, b) => a.rate - b.rate)[0];
   if (weak && weak.rate < 0.8) add({ drillId: weak.d.id, why: `Only ${Math.round(weak.rate * 100)}% solved so far - worth another look.` });
-  const stretch = DRILLS.find((d: any) => d.tier >= 3 && !progress[d.id]?.solves);
+  const stretch = atLevel.find((d: any) => d.tier >= 3 && !progress[d.id]?.solves);
   if (stretch) add({ drillId: stretch.id, why: 'Stretch goal: a harder technique you have not tried yet.' });
   return out.slice(0, 3);
 }
@@ -46,7 +49,7 @@ export default function HomePage() {
       .then((s) => setRecent(s.recent.slice(0, 6)))
       .catch(() => undefined);
   }, []);
-  const recs = recommendations(me.progress, me.user.settings.chesscom);
+  const recs = recommendations(me.progress, me.user.settings.chesscom, me.user.rating);
   const player = me.user.settings.chesscom ? (insights as any).players?.[me.user.settings.chesscom.toLowerCase()] : null;
   const left = Math.max(0, 5 - me.today.cloves);
   const r = me.totals.rank;
@@ -58,9 +61,10 @@ export default function HomePage() {
           <div className="eyebrow">
             {greeting()}, {me.user.displayName}
           </div>
-          <h1>{me.today.bulbDone ? 'Bulb complete. Nice work!' : left === 5 ? "Let's fill today's bulb" : `${left} clove${left === 1 ? '' : 's'} to go today`}</h1>
+          <h1>{me.today.bulbDone ? 'Bulb complete. Nice work!' : left >= 5 ? "Let's fill today's bulb" : `${formatCloves(left)} clove${left === 1 ? '' : 's'} to go today`}</h1>
           <p className="muted">
-            Every solved drill fills a clove. Fill all five for <b>+{BULB_BONUS}</b> bonus points
+            Solves fill cloves: a drill at your level fills a whole clove, warm-ups only part of one. Fill all five for <b>+{BULB_BONUS}</b> bonus
+            points
             {me.totals.streak > 0 ? (
               <>
                 {' '}
@@ -81,7 +85,7 @@ export default function HomePage() {
         <div className="hero-bulb">
           <GarlickBulb filled={me.today.cloves} size={170} />
           <div className="bulb-count">
-            <b>{Math.min(5, me.today.cloves)}</b>/5 cloves
+            <b>{formatCloves(Math.min(5, me.today.cloves))}</b>/5 cloves
           </div>
         </div>
       </section>

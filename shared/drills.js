@@ -12,6 +12,8 @@
 // Levels 1-3 use progressively longer / harder positions from the puzzle bank.
 // Levels 4-5 reuse the hardest positions with a tighter par time (speed mastery).
 // spm = seconds per move used to compute par time at each level.
+// targetRating = roughly the rating at which this drill is core learning;
+// well above it the drill is a warm-up (see shared/cloves.js).
 
 /** @typedef {'mate'|'convert'|'promote'|'hold'} Goal */
 
@@ -28,6 +30,7 @@ export const MAX_LEVEL = 5;
 export const DRILLS = [
   {
     id: 'krrk',
+    targetRating: 400,
     name: 'Ladder Mate',
     material: 'Two rooks vs king',
     tier: 1,
@@ -45,6 +48,7 @@ export const DRILLS = [
   },
   {
     id: 'kqk',
+    targetRating: 600,
     name: 'Queen Mate',
     material: 'King + queen vs king',
     tier: 1,
@@ -63,6 +67,7 @@ export const DRILLS = [
   },
   {
     id: 'krk',
+    targetRating: 800,
     name: 'Rook Mate',
     material: 'King + rook vs king',
     tier: 1,
@@ -82,6 +87,7 @@ export const DRILLS = [
   },
   {
     id: 'kpk-win',
+    targetRating: 1000,
     name: 'Escort the Pawn',
     material: 'King + pawn vs king (win)',
     tier: 2,
@@ -102,6 +108,7 @@ export const DRILLS = [
   },
   {
     id: 'kpk-draw',
+    targetRating: 1000,
     name: 'Opposition Defence',
     material: 'King vs king + pawn (draw)',
     tier: 2,
@@ -121,6 +128,7 @@ export const DRILLS = [
   },
   {
     id: 'kqkp',
+    targetRating: 1300,
     name: 'Queen vs Pawn',
     material: 'King + queen vs king + pawn on the 7th',
     tier: 3,
@@ -140,6 +148,7 @@ export const DRILLS = [
   },
   {
     id: 'kbbk',
+    targetRating: 1400,
     name: 'Two Bishops Mate',
     material: 'King + two bishops vs king',
     tier: 3,
@@ -158,6 +167,7 @@ export const DRILLS = [
   },
   {
     id: 'lucena',
+    targetRating: 1400,
     name: 'Lucena: Build a Bridge',
     material: 'Rook + pawn vs rook (win)',
     tier: 3,
@@ -179,6 +189,7 @@ export const DRILLS = [
   },
   {
     id: 'philidor',
+    targetRating: 1400,
     name: 'Philidor Defence',
     material: 'Rook vs rook + pawn (draw)',
     tier: 3,
@@ -198,6 +209,7 @@ export const DRILLS = [
   },
   {
     id: 'kqkr',
+    targetRating: 1800,
     name: 'Queen vs Rook',
     material: 'King + queen vs king + rook',
     tier: 4,
@@ -218,6 +230,7 @@ export const DRILLS = [
   },
   {
     id: 'kbnk',
+    targetRating: 1800,
     name: 'Bishop + Knight Mate',
     material: 'King + bishop + knight vs king',
     tier: 4,

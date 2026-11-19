@@ -47,7 +47,15 @@ export interface User {
   displayName: string;
   avatar: string;
   color: string;
+  rating: number | null;
+  ratingSource: string | null;
   settings: Settings;
+}
+
+export interface Config {
+  inviteRequired: boolean;
+  avatars: string[];
+  ratingSources: Record<string, string>;
 }
 
 export interface Rank {
@@ -102,6 +110,7 @@ export interface AttemptResult {
   perfect: boolean;
   parSeconds: number;
   personalBest: boolean;
+  cloveGain: number;
   progress: { level: number; qualifying: number; levelUp: boolean; needed: number; qualified: boolean };
   day: DayInfo & { bulbCompletedNow: boolean; bulbBonus: number };
   newAchievements: { id: string; name: string; icon: string; desc: string }[];

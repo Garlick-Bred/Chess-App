@@ -1,45 +1,56 @@
-// Username/password accounts with scrypt hashing and cookie sessions.
-import crypto from 'node:crypto';
-
+// Accounts: PBKDF2-SHA256 password hashing (Web Crypto, so it runs in Node and
+// in Cloudflare Workers), random session tokens in an HttpOnly cookie, and a
+// brute-force lockout stored in the database.
 const SESSION_DAYS = 60;
+// Cloudflare Workers allow at most 100,000 PBKDF2 iterations.
+const ITERATIONS = 100_000;
 export const COOKIE = 'ge_session';
+export const USERNAME_RE = /^[a-zA-Z0-9_-]{3,20}$/;
 
-export function hashPassword(password) {
-  const salt = crypto.randomBytes(16);
-  const hash = crypto.scryptSync(password, salt, 64);
-  return `scrypt$${salt.toString('base64')}$${hash.toString('base64')}`;
+const enc = new TextEncoder();
+const toB64 = (bytes) => btoa(String.fromCharCode(...new Uint8Array(bytes)));
+const fromB64 = (s) => Uint8Array.from(atob(s), (c) => c.charCodeAt(0));
+
+async function derive(password, salt, iterations) {
+  const key = await crypto.subtle.importKey('raw', enc.encode(password), 'PBKDF2', false, ['deriveBits']);
+  return new Uint8Array(await crypto.subtle.deriveBits({ name: 'PBKDF2', hash: 'SHA-256', salt, iterations }, key, 256));
 }
 
-export function verifyPassword(password, stored) {
-  const [scheme, saltB64, hashB64] = String(stored).split('$');
-  if (scheme !== 'scrypt') return false;
-  const expected = Buffer.from(hashB64, 'base64');
-  const actual = crypto.scryptSync(password, Buffer.from(saltB64, 'base64'), expected.length);
-  return crypto.timingSafeEqual(expected, actual);
+export async function hashPassword(password) {
+  const salt = crypto.getRandomValues(new Uint8Array(16));
+  const hash = await derive(password, salt, ITERATIONS);
+  return `pbkdf2$${ITERATIONS}$${toB64(salt)}$${toB64(hash)}`;
 }
 
-export function createSession(db, userId) {
-  const token = crypto.randomBytes(32).toString('base64url');
+export async function verifyPassword(password, stored) {
+  const [scheme, iter, saltB64, hashB64] = String(stored).split('$');
+  if (scheme !== 'pbkdf2') return false;
+  const expected = fromB64(hashB64);
+  const actual = await derive(password, fromB64(saltB64), Number(iter));
+  if (actual.length !== expected.length) return false;
+  let diff = 0;
+  for (let i = 0; i < actual.length; i++) diff |= actual[i] ^ expected[i];
+  return diff === 0;
+}
+
+export function randomToken() {
+  return toB64(crypto.getRandomValues(new Uint8Array(32))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+
+export async function createSession(store, userId) {
+  const token = randomToken();
   const now = Date.now();
-  db.prepare('INSERT INTO sessions (token, user_id, created_at, expires_at) VALUES (?, ?, ?, ?)').run(
-    token,
-    userId,
-    now,
-    now + SESSION_DAYS * 86400e3,
-  );
+  await store.run('INSERT INTO sessions (token, user_id, created_at, expires_at) VALUES (?, ?, ?, ?)', token, userId, now, now + SESSION_DAYS * 86400e3);
   return token;
 }
 
-export function sessionUser(db, token) {
+export async function sessionUser(store, token) {
   if (!token) return null;
-  const row = db
-    .prepare('SELECT u.* FROM sessions s JOIN users u ON u.id = s.user_id WHERE s.token = ? AND s.expires_at > ?')
-    .get(token, Date.now());
-  return row ?? null;
+  return store.get('SELECT u.* FROM sessions s JOIN users u ON u.id = s.user_id WHERE s.token = ? AND s.expires_at > ?', token, Date.now());
 }
 
-export function destroySession(db, token) {
-  if (token) db.prepare('DELETE FROM sessions WHERE token = ?').run(token);
+export async function destroySession(store, token) {
+  if (token) await store.run('DELETE FROM sessions WHERE token = ?', token);
 }
 
 export function parseCookies(header) {
@@ -57,27 +68,29 @@ export function sessionCookie(token, { secure }) {
   return attrs.join('; ');
 }
 
-export function clearCookie() {
-  return `${COOKIE}=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0`;
+export function clearCookie({ secure }) {
+  return `${COOKIE}=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0${secure ? '; Secure' : ''}`;
 }
 
-// Simple in-memory brute-force throttle: 8 failures -> 5 minute lockout.
-const failures = new Map();
-export function throttled(key) {
-  const f = failures.get(key);
-  return f && f.until > Date.now();
-}
-export function recordFailure(key) {
-  const f = failures.get(key) ?? { count: 0, until: 0 };
-  f.count++;
-  if (f.count >= 8) {
-    f.until = Date.now() + 5 * 60e3;
-    f.count = 0;
-  }
-  failures.set(key, f);
-}
-export function clearFailures(key) {
-  failures.delete(key);
+// 8 failed logins for a username lock it for 5 minutes.
+export async function throttled(store, key) {
+  const row = await store.get('SELECT until FROM login_failures WHERE key = ?', key);
+  return !!row && row.until > Date.now();
 }
 
-export const USERNAME_RE = /^[a-zA-Z0-9_-]{3,20}$/;
+export async function recordFailure(store, key) {
+  const row = (await store.get('SELECT count FROM login_failures WHERE key = ?', key)) ?? { count: 0 };
+  const count = row.count + 1;
+  const locked = count >= 8;
+  await store.run(
+    `INSERT INTO login_failures (key, count, until) VALUES (?, ?, ?)
+     ON CONFLICT(key) DO UPDATE SET count = excluded.count, until = excluded.until`,
+    key,
+    locked ? 0 : count,
+    locked ? Date.now() + 5 * 60e3 : 0,
+  );
+}
+
+export async function clearFailures(store, key) {
+  await store.run('DELETE FROM login_failures WHERE key = ?', key);
+}

@@ -73,44 +73,64 @@ const LIQUID =
   'M-100 0 Q -87 -7 -75 0 T -50 0 T -25 0 T 0 0 T 25 0 T 50 0 T 75 0 T 100 0 T 125 0 T 150 0 T 175 0 T 200 0 T 225 0 T 250 0 T 275 0 T 300 0 V 260 H -100 Z';
 
 export interface GarlickBulbProps {
+  /** Cloves filled, 0-5. Fractions fill a clove part of the way. */
   filled: number;
   /** Start from this many cloves and animate up to `filled`. */
   from?: number;
   size?: number;
   celebrate?: boolean;
-  onClove?: (count: number) => void;
+  /** Called at each animation step with the new total and whether a clove completed. */
+  onClove?: (count: number, completed: boolean) => void;
+}
+
+const EPS = 1e-6;
+// Lowest point of each clove (left to right) and where its body meets the neck:
+// a part-filled clove's "liquid" rises between the two.
+const CLOVE_BOTTOM = [208, 220, 228, 220, 208];
+const BODY_TOP = 96;
+const ORDER_OF = FILL_ORDER.reduce<number[]>((acc, clove, idx) => ((acc[clove] = idx), acc), []);
+
+function liquidLevel(clove: number, frac: number) {
+  if (frac >= 1 - EPS) return 40; // above the neck: completely full
+  if (frac <= EPS) return 240; // below the bottom: empty
+  return CLOVE_BOTTOM[clove] - frac * (CLOVE_BOTTOM[clove] - BODY_TOP);
 }
 
 export default function GarlickBulb({ filled, from, size = 160, celebrate = true, onClove }: GarlickBulbProps) {
   const uid = useId().replace(/:/g, '');
-  const target = Math.min(5, filled);
-  const [shown, setShown] = useState(Math.min(5, from ?? filled));
+  const target = Math.max(0, Math.min(5, filled));
+  const [shown, setShown] = useState(Math.max(0, Math.min(5, from ?? filled)));
   const [newest, setNewest] = useState<number | null>(null);
   const [celebrating, setCelebrating] = useState(false);
 
   useEffect(() => {
-    if (target < shown) {
+    if (target < shown - EPS) {
       setShown(target); // e.g. a new day started
       return;
     }
-    if (shown >= target) return;
-    const t = setTimeout(() => {
-      const next = shown + 1;
-      setShown(next);
-      setNewest(FILL_ORDER[next - 1]);
-      onClove?.(next);
-      if (next >= 5 && celebrate) setTimeout(() => setCelebrating(true), 950);
-    }, from != null && shown === from ? 450 : 750);
+    if (shown >= target - EPS) return;
+    // Animate one clove at a time: fill up to the next whole clove, or the target.
+    const t = setTimeout(
+      () => {
+        const next = Math.min(target, Math.floor(shown + EPS) + 1);
+        const completed = Math.abs(next - Math.round(next)) < EPS && next > shown + EPS;
+        setShown(next);
+        if (completed) setNewest(FILL_ORDER[Math.round(next) - 1]);
+        onClove?.(next, completed);
+        if (next >= 5 - EPS && celebrate) setTimeout(() => setCelebrating(true), 950);
+      },
+      from != null && Math.abs(shown - from) < EPS ? 450 : 750,
+    );
     return () => clearTimeout(t);
   }, [shown, target, from, celebrate, onClove]);
 
-  const filledSet = new Set(FILL_ORDER.slice(0, shown));
+  const frac = (clove: number) => Math.max(0, Math.min(1, shown - ORDER_OF[clove]));
   const cls = ['garlick'];
-  if (shown >= 5) cls.push('complete');
+  if (shown >= 5 - EPS) cls.push('complete');
   if (celebrating) cls.push('celebrating');
 
   return (
-    <div className={cls.join(' ')} style={{ width: size, height: size * 1.2 }} role="img" aria-label={`Garlick bulb: ${shown} of 5 cloves`}>
+    <div className={cls.join(' ')} style={{ width: size, height: size * 1.2 }} role="img" aria-label={`Garlick bulb: ${Math.round(shown * 100) / 100} of 5 cloves`}>
       <svg viewBox="0 -4 200 240" width="100%" height="100%" overflow="visible">
         <defs>
           <linearGradient id={`shade-${uid}`} x1="0.05" y1="0.1" x2="1" y2="0.9">
@@ -134,10 +154,10 @@ export default function GarlickBulb({ filled, from, size = 160, celebrate = true
 
         <g className="garlick-body">
           {[0, 4, 1, 3, 2].map((i) => (
-            <g key={i} className={`clove ${filledSet.has(i) ? 'filled' : ''} ${newest === i ? 'new' : ''}`}>
+            <g key={i} className={`clove ${frac(i) >= 1 - EPS ? 'filled' : frac(i) > EPS ? 'partial' : ''} ${newest === i ? 'new' : ''}`}>
               <path className="clove-base" d={CLOVES[i]} />
               <g clipPath={`url(#clip-${uid}-${i})`}>
-                <g className="clove-level" style={{ transform: filledSet.has(i) ? 'translateY(40px)' : 'translateY(240px)' }}>
+                <g className="clove-level" style={{ transform: `translateY(${liquidLevel(i, frac(i))}px)` }}>
                   <path className="clove-liquid" d={LIQUID} />
                 </g>
                 <path className="clove-shade" d={CLOVES[i]} fill={`url(#shade-${uid})`} />

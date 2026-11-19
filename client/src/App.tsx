@@ -61,7 +61,10 @@ export default function App() {
   const [state, setState] = useState<'loading' | 'in' | 'out'>('loading');
 
   useEffect(() => {
-    const on = () => setRoute(parseHash());
+    const on = () => {
+      setRoute(parseHash());
+      window.scrollTo(0, 0); // new page starts at the top (matters on phones)
+    };
     window.addEventListener('hashchange', on);
     return () => window.removeEventListener('hashchange', on);
   }, []);
