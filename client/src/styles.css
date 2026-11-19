@@ -1711,3 +1711,19 @@ button.card:hover {
     margin: 0 10px;
   }
 }
+
+/* ---------- chess.com insight card ---------- */
+.insight {
+  border-left: 4px solid var(--yellow);
+}
+.insight-headline {
+  display: block;
+  font-size: 1.1rem;
+  margin: 4px 0 6px;
+}
+.insight ul {
+  margin: 0;
+  padding-left: 18px;
+  color: #d9d2c9;
+  line-height: 1.5;
+}

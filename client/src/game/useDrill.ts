@@ -169,7 +169,10 @@ export function useDrill(drillId: string, level: number, playAs: 'white' | 'blac
     start(false);
   }, [start]);
 
-  const alive = (id: number) => g.current?.gameId === id;
+  // A pending async step only continues if this is still the same game and it
+  // has not been ended meanwhile (e.g. "Give up" while the computer thinks).
+  const sameGame = (id: number) => g.current?.gameId === id;
+  const alive = (id: number) => sameGame(id) && g.current!.phase !== 'done';
 
   const pauseClock = () => {
     const s = g.current!;
@@ -244,12 +247,12 @@ export function useDrill(drillId: string, level: number, playAs: 'white' | 'blac
         mateIn: s.puzzle.mateIn,
         day: localDay(),
       });
-      if (!alive(id)) return;
+      if (!sameGame(id)) return;
       s.result = result;
     } catch (e: any) {
-      if (alive(id)) s.submitError = e.message ?? 'Could not save this attempt';
+      if (sameGame(id)) s.submitError = e.message ?? 'Could not save this attempt';
     }
-    if (alive(id)) rerender();
+    if (sameGame(id)) rerender();
   };
 
   const computerTurn = async () => {

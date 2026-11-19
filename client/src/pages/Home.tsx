@@ -47,6 +47,7 @@ export default function HomePage() {
       .catch(() => undefined);
   }, []);
   const recs = recommendations(me.progress, me.user.settings.chesscom);
+  const player = me.user.settings.chesscom ? (insights as any).players?.[me.user.settings.chesscom.toLowerCase()] : null;
   const left = Math.max(0, 5 - me.today.cloves);
   const r = me.totals.rank;
 
@@ -109,6 +110,18 @@ export default function HomePage() {
           <span>{plural(me.totals.bulbs, 'full bulb')}</span>
         </div>
       </section>
+
+      {player?.headline && (
+        <section className="card insight">
+          <div className="eyebrow">From your chess.com games · {player.games} games analysed</div>
+          <b className="insight-headline">{player.headline}</b>
+          <ul>
+            {(player.facts ?? []).map((f: string, i: number) => (
+              <li key={i}>{f}</li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       {recs.length > 0 && (
         <section>

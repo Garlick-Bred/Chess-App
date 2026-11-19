@@ -36,8 +36,13 @@ export default function PlayPage({ drillId, levelParam }: { drillId: string; lev
       </div>
     );
   }
-  const current = me.progress[actualId]?.level ?? 1;
-  const requested = levelParam ? Math.max(1, Math.min(current, Number(levelParam) || current)) : current;
+  // Freeze the level for this round: a level-up mid-round must not restart the
+  // puzzle (and close the result screen that announces it).
+  const requested = useMemo(() => {
+    const current = me.progress[actualId]?.level ?? 1;
+    return levelParam ? Math.max(1, Math.min(current, Number(levelParam) || current)) : current;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [actualId, round, levelParam]);
   return <Session key={`${actualId}-${requested}-${round}`} drillId={actualId} level={requested} random={random} onNext={() => setRound((r) => r + 1)} />;
 }
 
