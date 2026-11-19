@@ -1,0 +1,106 @@
+import { useEffect, useState } from 'react';
+import { api } from '../api';
+import { recentAccounts } from '../App';
+import GarlicBulb from '../components/GarlicBulb';
+
+export default function AuthPage({ onDone }: { onDone: () => Promise<void> }) {
+  const [mode, setMode] = useState<'login' | 'register'>(recentAccounts().length ? 'login' : 'register');
+  const [username, setUsername] = useState(recentAccounts()[0]?.username ?? '');
+  const [displayName, setDisplayName] = useState('');
+  const [password, setPassword] = useState('');
+  const [invite, setInvite] = useState('');
+  const [inviteRequired, setInviteRequired] = useState(false);
+  const [error, setError] = useState('');
+  const [busy, setBusy] = useState(false);
+  const accounts = recentAccounts();
+
+  useEffect(() => {
+    api
+      .get<{ inviteRequired: boolean }>('/api/config')
+      .then((c) => setInviteRequired(c.inviteRequired))
+      .catch(() => undefined);
+  }, []);
+
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+    setBusy(true);
+    try {
+      if (mode === 'login') await api.post('/api/auth/login', { username, password });
+      else await api.post('/api/auth/register', { username, password, displayName, inviteCode: invite });
+      await onDone();
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="auth">
+      <div className="auth-card">
+        <div className="auth-hero">
+          <GarlicBulb filled={3} size={92} celebrate={false} />
+          <h1>
+            Garlic <b>Endgames</b>
+          </h1>
+          <p className="muted">Drill the endgames that decide your games. Fill a clove with every solve.</p>
+        </div>
+
+        {mode === 'login' && accounts.length > 0 && (
+          <div className="account-chips">
+            {accounts.map((a) => (
+              <button key={a.username} type="button" className={`account-chip ${a.username === username ? 'on' : ''}`} onClick={() => setUsername(a.username)}>
+                <span>{a.avatar}</span>
+                {a.displayName}
+              </button>
+            ))}
+          </div>
+        )}
+
+        <div className="tabs">
+          <button className={mode === 'login' ? 'on' : ''} onClick={() => setMode('login')}>
+            Log in
+          </button>
+          <button className={mode === 'register' ? 'on' : ''} onClick={() => setMode('register')}>
+            New account
+          </button>
+        </div>
+
+        <form onSubmit={submit} className="form">
+          <label>
+            Username
+            <input value={username} onChange={(e) => setUsername(e.target.value)} autoComplete="username" autoCapitalize="none" required />
+          </label>
+          {mode === 'register' && (
+            <label>
+              Display name
+              <input value={displayName} onChange={(e) => setDisplayName(e.target.value)} placeholder="What the family sees" maxLength={24} />
+            </label>
+          )}
+          <label>
+            Password
+            <input
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
+              required
+              minLength={6}
+            />
+          </label>
+          {mode === 'register' && inviteRequired && (
+            <label>
+              Family invite code
+              <input value={invite} onChange={(e) => setInvite(e.target.value)} required />
+            </label>
+          )}
+          {error && <div className="form-error">{error}</div>}
+          <button className="btn primary big" disabled={busy}>
+            {mode === 'login' ? 'Log in' : 'Create account'}
+          </button>
+        </form>
+      </div>
+    </div>
+  );
+}

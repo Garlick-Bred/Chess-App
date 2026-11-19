@@ -1,0 +1,12 @@
+node_modules/
+client/dist/
+data/
+*.db
+*.db-*
+.DS_Store
+.env
+analysis/.cache/
+analysis/venv/
+test-results/
+playwright-report/
+scripts/.cache/
