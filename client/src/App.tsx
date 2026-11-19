@@ -13,6 +13,7 @@ import LeaderboardPage from './pages/Leaderboard';
 import SettingsPage from './pages/Settings';
 import LearnPage from './pages/Learn';
 import LessonPage from './pages/Lesson';
+import DayDonePage from './pages/DayDone';
 
 interface AppCtx {
   me: Me;
@@ -47,6 +48,22 @@ export function rememberAccount(me: Me) {
     localStorage.setItem(RECENT_ACCOUNTS, JSON.stringify(next));
   } catch {
     /* storage unavailable */
+  }
+}
+/** "Done for today" is remembered per account and day in this browser only. */
+const doneKey = (username: string) => `ge_done_${username}`;
+export function markDoneToday(username: string) {
+  try {
+    localStorage.setItem(doneKey(username), localDay());
+  } catch {
+    /* storage unavailable */
+  }
+}
+export function isDoneToday(username: string): boolean {
+  try {
+    return localStorage.getItem(doneKey(username)) === localDay();
+  } catch {
+    return false;
   }
 }
 export function recentAccounts(): { username: string; displayName: string; avatar: string }[] {
@@ -116,6 +133,9 @@ export default function App() {
       break;
     case 'lesson':
       page = <LessonPage key={window.location.hash} drillId={route.arg ?? ''} query={route.query} />;
+      break;
+    case 'done':
+      page = <DayDonePage />;
       break;
     case 'stats':
       page = <StatsPage />;

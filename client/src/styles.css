@@ -1999,3 +1999,82 @@ button.card:hover {
   font-weight: 800;
   font-size: 0.9rem;
 }
+
+/* ---------- bulb complete: keep going or done for today ---------- */
+.btn.gold {
+  background: var(--yellow);
+  border-bottom-color: #b98f12;
+  color: #2b2410;
+}
+.day-choice {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  text-align: center;
+  padding: 14px;
+  border-radius: 12px;
+  background: rgba(247, 198, 49, 0.08);
+  border: 1px solid rgba(247, 198, 49, 0.35);
+  animation: day-choice-in 0.45s ease-out 1.4s both;
+}
+.day-choice-btns {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  width: 100%;
+}
+@keyframes day-choice-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+}
+@media (max-width: 420px) {
+  .day-choice-btns {
+    grid-template-columns: 1fr;
+  }
+}
+.day-done-card {
+  max-width: 560px;
+  margin: 10px auto;
+  padding: 26px 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  text-align: center;
+  background: radial-gradient(circle at 50% 0%, rgba(247, 198, 49, 0.12), transparent 60%), var(--card);
+}
+.day-done-card h1 {
+  margin: 0;
+}
+.day-done-card p {
+  margin: 0;
+  max-width: 420px;
+}
+.day-tiles {
+  width: 100%;
+  grid-template-columns: repeat(3, 1fr);
+}
+.day-tiles .tile {
+  background: rgba(255, 255, 255, 0.04);
+}
+.day-drills {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px;
+}
+.day-drills .chip {
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 999px;
+  padding: 4px 10px;
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+@media (prefers-reduced-motion: reduce) {
+  .day-choice {
+    animation: none;
+  }
+}

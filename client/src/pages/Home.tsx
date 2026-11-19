@@ -4,7 +4,7 @@ import { BULB_BONUS } from '@shared/scoring.js';
 import insights from '@shared/insights.json';
 import { drillFit, formatCloves } from '@shared/cloves.js';
 import { api, localDay } from '../api';
-import { go, useApp } from '../App';
+import { go, isDoneToday, useApp } from '../App';
 import GarlickBulb from '../components/GarlickBulb';
 import { Material, Stars, TierChip, LevelDots, fmtTime } from '../components/ui';
 
@@ -53,6 +53,7 @@ export default function HomePage() {
   const player = me.user.settings.chesscom ? (insights as any).players?.[me.user.settings.chesscom.toLowerCase()] : null;
   const left = Math.max(0, 5 - me.today.cloves);
   const r = me.totals.rank;
+  const doneToday = isDoneToday(me.user.username);
 
   return (
     <div className="page home">
@@ -61,7 +62,27 @@ export default function HomePage() {
           <div className="eyebrow">
             {greeting()}, {me.user.displayName}
           </div>
-          <h1>{me.today.bulbDone ? 'Bulb complete. Nice work!' : left >= 5 ? "Let's fill today's bulb" : `${formatCloves(left)} clove${left === 1 ? '' : 's'} to go today`}</h1>
+          <h1>
+            {doneToday
+              ? 'Done for today ✓'
+              : me.today.bulbDone
+                ? 'Bulb complete. Nice work!'
+                : left >= 5
+                  ? "Let's fill today's bulb"
+                  : `${formatCloves(left)} clove${left === 1 ? '' : 's'} to go today`}
+          </h1>
+          {doneToday ? (
+            <p className="muted">
+              {me.today.bulbDone ? 'Your bulb is full' : 'You called it a day'}
+              {me.totals.streak > 0 ? (
+                <>
+                  {' '}
+                  and your <b className="flame">🔥 {me.totals.streak}-day streak</b> is safe
+                </>
+              ) : null}
+              . A fresh bulb starts at midnight.
+            </p>
+          ) : (
           <p className="muted">
             Solves fill cloves: a drill at your level fills a whole clove, warm-ups only part of one. Fill all five for <b>+{BULB_BONUS}</b> bonus
             points
@@ -73,13 +94,27 @@ export default function HomePage() {
             ) : null}
             .
           </p>
+          )}
           <div className="row gap wrap">
-            <button className="btn primary big" onClick={() => go('/play/random')}>
-              🎲 Random drill
-            </button>
-            <button className="btn big" onClick={() => go('/drills')}>
-              Choose a drill
-            </button>
+            {doneToday ? (
+              <>
+                <button className="btn big" onClick={() => go('/done')}>
+                  Today's summary
+                </button>
+                <button className="btn ghost" onClick={() => go('/play/random')}>
+                  Play anyway ▸
+                </button>
+              </>
+            ) : (
+              <>
+                <button className="btn primary big" onClick={() => go('/play/random')}>
+                  🎲 Random drill
+                </button>
+                <button className="btn big" onClick={() => go('/drills')}>
+                  Choose a drill
+                </button>
+              </>
+            )}
           </div>
         </div>
         <div className="hero-bulb">

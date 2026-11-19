@@ -131,11 +131,11 @@ function Session({
       if (e.key === 'h' && view?.phase === 'user') void textHint();
       if (e.key === 'p' && view?.phase === 'user') void pieceHint();
       if (e.key === 'f') setFlipped((f) => !f);
-      if (e.key === 'Enter' && view?.phase === 'done') onNext();
+      if (e.key === 'Enter' && view?.phase === 'done' && !view.result?.day.bulbCompletedNow) onNext();
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [view?.phase, textHint, pieceHint, onNext]);
+  }, [view?.phase, view?.result, textHint, pieceHint, onNext]);
 
   if (!view) return <div className="page">Loading…</div>;
   const userSide = view.userColor === 'w' ? 'White' : 'Black';
@@ -372,6 +372,7 @@ function Session({
           onLesson={openLesson}
           onReview={() => setModalOpen(false)}
           onDrills={() => go('/drills')}
+          onDone={() => go('/done')}
           isMaxLevel={level >= MAX_LEVEL}
         />
       )}

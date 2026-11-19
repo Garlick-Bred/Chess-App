@@ -162,6 +162,12 @@ Seconds-per-move drops with level (e.g. rook mate: 4.5 → 2.5 s).
   ones at level 2. Changing your rating re-places drills you haven't played yet.
 * The 5th clove completes the bulb: the stalks shoot up and wiggle, the bulb
   bounces, glows gold and sparkles, and you earn **+50 points**.
+* The solve that completes the bulb then asks **"Keep going, or call it a
+  day?"** (Enter doesn't skip the question). *Done for today* opens a wrap-up:
+  puzzles solved, points, perfect solves, the drills you played, your streak and
+  the time until a fresh bulb. Home then shows "Done for today ✓" for the rest
+  of the day, with a small "Play anyway" link. The choice is remembered in that
+  browser only; extra solves after it still earn points.
 * Completing the bulb on consecutive days builds a 🔥 streak (badges at 3, 7
   and 30 days).
 * The day resets at **your local midnight**.

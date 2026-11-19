@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { AttemptResult } from '../api';
 import { sfx } from '../sound';
 import GarlickBulb from './GarlickBulb';
@@ -35,10 +35,20 @@ interface Props {
   onLesson: () => void;
   onReview: () => void;
   onDrills: () => void;
+  onDone: () => void;
 }
 
-export default function ResultModal({ drill, level, outcome, result, submitError, durationMs, prevCloves, isMaxLevel, onNext, onRetry, onLesson, onReview, onDrills }: Props) {
+export default function ResultModal({ drill, level, outcome, result, submitError, durationMs, prevCloves, isMaxLevel, onNext, onRetry, onLesson, onReview, onDrills, onDone }: Props) {
   const ok = outcome.success;
+  // The solve that fills the 5th clove asks whether to keep going or stop for the day.
+  const askDone = !!result?.day.bulbCompletedNow;
+  const choiceRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!askDone) return;
+    // On phones the question sits below the fold: bring it into view after the celebration.
+    const t = setTimeout(() => choiceRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 1600);
+    return () => clearTimeout(t);
+  }, [askDone]);
   const cloves = result?.day.cloves ?? prevCloves;
   const bulbFull = cloves >= 5 - 1e-9;
   const gotClove = ok && result && cloves > prevCloves && prevCloves < 5;
@@ -166,9 +176,24 @@ export default function ResultModal({ drill, level, outcome, result, submitError
               📖 Show me how <small>step-by-step lesson, then replay for a clove</small>
             </button>
           )}
-          <button className={`btn ${ok ? 'primary big' : ''}`} onClick={onNext} autoFocus={ok}>
-            Next puzzle ▸
-          </button>
+          {askDone ? (
+            <div className="day-choice" ref={choiceRef}>
+              <b>Today's bulb is full. Keep going, or call it a day?</b>
+              <div className="day-choice-btns">
+                <button className="btn primary big" onClick={onNext}>
+                  Keep going ▸
+                </button>
+                <button className="btn gold big" onClick={onDone}>
+                  ✓ Done for today
+                </button>
+              </div>
+              <small className="muted">Extra solves still earn points for the family board.</small>
+            </div>
+          ) : (
+            <button className={`btn ${ok ? 'primary big' : ''}`} onClick={onNext} autoFocus={ok}>
+              Next puzzle ▸
+            </button>
+          )}
           <div className="row gap center wrap">
             {!ok && (
               <button className="btn" onClick={onRetry}>
