@@ -16,7 +16,8 @@
     "test": "vitest run",
     "typecheck": "tsc -p client/tsconfig.json --noEmit",
     "puzzles": "node scripts/generate-puzzles.mjs",
-    "deploy": "node scripts/deploy-cloudflare.mjs"
+    "deploy": "node scripts/deploy-cloudflare.mjs",
+    "bundle": "node scripts/deploy-cloudflare.mjs --build-only && node -e \"require('fs').mkdirSync('deploy',{recursive:true});require('fs').copyFileSync('.deploy/worker.js','deploy/worker.js')\""
   },
   "dependencies": {
     "chess.js": "^1.4.0"
