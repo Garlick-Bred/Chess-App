@@ -2,6 +2,8 @@
 
 ## Done since the first version
 
+* The site is live at https://endgames.garlick.ca (a Workers custom domain:
+  free, with an automatic certificate).
 * Family accounts on a public Cloudflare site with an invite code, adult
   profiles with chess rating, and rating-based starting levels.
 * Harder cloves: drills below your level only fill part of one.
@@ -50,23 +52,19 @@ Roughly in order of value for you:
 
 ## Open questions
 
-1. **Custom domain?** You own garlick.ca, mitchellgarlick.com and
-   consistencycrew.ca on Cloudflare. I can put the site at, say,
-   `chess.garlick.ca`. It's a DNS change on your domain, so I haven't done it
-   without asking.
-2. **Will the GitHub repo stay public?** Deploys without a token rely on
+1. **Will the GitHub repo stay public?** Deploys without a token rely on
    Cloudflare fetching the bundle from the public repo. If you make it private,
    deploys need either a valid Cloudflare API token in the environment's
    Network secrets, or the repo connected to Cloudflare Workers Builds (push to
    deploy). The token saved earlier was rejected by Cloudflare as invalid, so
    you may want to delete it from the environment's settings.
-3. **Who's in the family, roughly how strong is each person, and how much time
+2. **Who's in the family, roughly how strong is each person, and how much time
    do they have?** That tunes the clove bands, the default rating, and whether
    five cloves a day is the right target.
-4. **Should ratings be put on one scale** (see the table above)?
-5. **Should the leaderboard be handicapped** so the strongest player doesn't
+3. **Should ratings be put on one scale** (see the table above)?
+4. **Should the leaderboard be handicapped** so the strongest player doesn't
    always win the week?
-6. **Should I add an admin role** for you: reset passwords, remove accounts,
+5. **Should I add an admin role** for you: reset passwords, remove accounts,
    close sign-ups?
-7. **Rating goal and time frame** (for example "+150 blitz by spring"), so the
+6. **Rating goal and time frame** (for example "+150 blitz by spring"), so the
    app can suggest a weekly plan.

@@ -56,8 +56,9 @@ solve.
 
 ## Live site
 
-**https://garlick-endgames.garlick-mitchell.workers.dev**: a Cloudflare
-Worker with a D1 database, on Cloudflare's free plan. New accounts need the
+**https://endgames.garlick.ca**: a Cloudflare Worker with a D1 database, on
+Cloudflare's free plan. The same Worker also answers at
+`garlick-endgames.garlick-mitchell.workers.dev`. New accounts need the
 family invite code. Each person picks a username and password, and optionally
 their chess rating.
 
