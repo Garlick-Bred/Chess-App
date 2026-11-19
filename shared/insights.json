@@ -1,4 +1,23 @@
 {
-  "note": "Per chess.com account recommendations produced by analysis/report.py",
-  "players": {}
+  "note": "Per chess.com account summaries from analysis/ (see docs/reports). Keyed by lowercase chess.com username; set it in Settings.",
+  "players": {
+    "ham_sandmitch": {
+      "games": 1809,
+      "analysed": "2026-11-19",
+      "report": "docs/reports/ham_sandmitch-endgames.md",
+      "headline": "Your biggest endgame leak is the clock, then pawn endings.",
+      "facts": [
+        "227 endgames lost on time, 57 of them with a winning position still on the board.",
+        "Pawn endings: you scored 52.6% where the engine expected 63% - the biggest gap per game of any endgame type.",
+        "You stalemated an opponent 10 times while ahead in material, 4 of them with a queen against a bare king.",
+        "From a level endgame you score 41%; good technique should push that above 50%."
+      ],
+      "recommended": [
+        { "drillId": "kpk-draw", "reason": "pawn endings are your biggest gap per game (52.6% scored vs 63% expected)." },
+        { "drillId": "kqk", "reason": "you stalemated opponents 10 times while ahead - this drill flags stalemates and builds speed." },
+        { "drillId": "kpk-win", "reason": "you converted only 60% of winning pawn endings." },
+        { "drillId": "lucena", "reason": "you reach pure rook endings in about 1 in 8 endgames and convert 65% of the winning ones." }
+      ]
+    }
+  }
 }
