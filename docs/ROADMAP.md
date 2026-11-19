@@ -1,66 +1,72 @@
-# What's missing, and questions for you
+# What's missing, and open questions
 
-## Things you didn't ask for but will probably want
+## Done since the first version
 
-Roughly in order of value for you specifically:
+* Family accounts on a public Cloudflare site with an invite code, adult
+  profiles with chess rating, and rating-based starting levels.
+* Harder cloves: drills below your level only fill part of one.
+* "Garlick" naming and the cartoon bulb.
+
+## Still worth building
+
+Roughly in order of value for you:
 
 1. **A "beat the clock" mode.** Your biggest endgame leak is time, not
    knowledge: 227 endgames were lost on time, 57 of them with a winning position
-   on the board (see the [analysis report](reports/ham_sandmitch-endgames.md)).
-   Levels 4–5 already train speed against par, but a real game clock (for
-   example 30 s + 1 s per move to mate with K+Q) would copy the blitz pressure
-   where you actually lose.
+   on the board (see the [report](reports/ham_sandmitch-endgames.md)). A real
+   game clock per drill (for example 30 s + 1 s per move for K+Q) would copy the
+   blitz pressure where you actually lose.
 2. **Spaced repetition of your misses.** Store every position you failed or
    needed a takeback on, and serve that exact position again after 1, 3 and
-   7 days. Cheap to add: the attempts table already stores the start FEN.
+   7 days. The attempts table already stores the start position.
 3. **Positions from your own games.** The analysis found the exact moves where
-   you threw away tablebase wins or draws (with 7 or fewer pieces). Turning those
-   into a personal "my mistakes" deck is the most targeted practice possible.
-4. **The endgames you actually reach most.** Your most common endgames (rook +
-   minor piece, queen + others) have too many pieces for a tablebase. Drilling
-   them needs Stockfish (in the browser via WebAssembly) and a "play it out from
-   this position" mode. Pure rook endings and pawn endings beyond K+P vs K are
-   the next drill families to add: outside passed pawn, square rule and pawn
-   races, triangulation, Vancura, rook behind the passed pawn.
-5. **Password resets.** There is no email, so a forgotten password currently
-   needs a database edit. A simple "family admin can reset passwords" switch is
-   worth adding before sharing.
-6. **Hosting and backups.** The app is one Node process plus one SQLite file.
-   It needs a host with a persistent disk, and the database should be backed up.
-7. **Adaptive par times.** Par is a formula today. Once the family has played a
-   few hundred drills, par could come from your own median times.
-8. **Install as an app (PWA)** so it sits on phones' home screens, with
-   haptics on move and clove fill.
-9. **Grounded explanations.** If you later want an AI coach, have it explain
-   the tablebase's verdict (e.g. "Kd3 takes the opposition") and check every
-   claim against the tablebase. Never let it judge moves on its own.
-10. **Accessibility:** keyboard move entry, and screen-reader announcements of
-    moves and grades.
+   you threw away tablebase wins or draws. Turn them into a personal deck.
+4. **The endgames you actually reach most** (rook + minor piece, queen +
+   others) are too big for a tablebase. They need Stockfish (WebAssembly, in
+   the browser) and a "play it out" mode. The next drill families to add are
+   pawn races and the square rule, triangulation, outside passed pawns, Vancura,
+   and a rook behind a passed pawn.
+5. **Password resets.** There is no email, so an admin (you) needs a "reset
+   password" button for family members.
+6. **Rating sync from chess.com.** If each person enters their chess.com
+   username, the site can refresh their rating automatically.
+7. **Adaptive par times** from the family's own median times once there is
+   enough data.
+8. **Install as an app (PWA)** with haptics on phones.
+9. **Grounded explanations:** an AI coach that explains the tablebase's verdict
+   and is checked against it, never judging moves itself.
 
 ## Decisions I made that you might want to change
 
-| Decision | What I chose | Alternatives |
+| Decision | Current choice | Alternatives |
 |---|---|---|
-| What fills a clove | Any solve, including easy drills, hints and takebacks | Require a solve at your current level, or 5 different drills, so it can't be farmed with Ladder Mate |
-| Bulb size | 5 cloves, +50 points | Different size or bonus |
-| Hints / takebacks | Allowed with −20% / −25% | Disallow at speed levels |
-| Clock | Counts only your thinking time | Wall-clock time |
-| Locking | Every drill open from the start; levels unlock per drill | Lock tiers behind earlier ones |
-| Family competition | Raw points | Handicap by rating so beginners can compete with you |
-| Accounts | Username + password, optional family invite code | Profile picker with PINs on one shared device |
-| Colour | Random White/Black per puzzle (changeable in Settings) | Always White |
+| Clove values | Your level 1 · easy ½ · warm-up ¼; level 3 ×1.5, levels 4-5 ×2 (max 1); hint or takeback halves it | Stricter (warm-ups worth 0), or a daily cap on warm-up cloves |
+| "Your level" bands | Less than 200 below your rating = core; 200-499 below = easy; 500+ below = warm-up | Different bands, or per-drill tuning after the family has played |
+| Rating sources | Every source (chess.com rapid/blitz, FIDE, CFC, Lichess, guess) is taken at face value | Convert to one scale (chess.com and Lichess run higher than FIDE/CFC at club level) |
+| Bulb | 5 cloves, +50 points, resets at local midnight | Different size or bonus |
+| Leaderboard | Raw points, weekly and all-time; ratings visible to the family | Handicap by rating so everyone can compete |
+| Sign-ups | Anyone with the invite code can create an account | Turn sign-ups off once the family has joined |
+| Passwords | At least 8 characters, no email recovery | Admin reset, or email-based reset |
 
-## Questions that would improve the next version
+## Open questions
 
-1. **Who is in the family?** Ages and rough ratings change the defaults: a
-   kid mode with gentler penalties, bigger hints and fewer stats, for example.
-2. **Where should it run?** Options in the README. Do you want a domain name?
-3. **Should family members' chess.com accounts be analysed too?** The analysis
-   currently runs as scripts. Doing it inside the app means fetching from
-   chess.com on the server and running Stockfish there (or in the browser).
-4. **How competitive should the leaderboard be?** Weekly reset only, or also
-   all-time? Handicaps?
-5. **Your goal and time frame.** For example "+150 blitz in 3 months" would
-   let the app pace the daily bulb (5 drills a day, or more on weekends).
-6. **Board look.** It uses a green board and the classic "cburnett" pieces.
-   Would you like alternative themes, piece sets or sounds?
+1. **Custom domain?** You own garlick.ca, mitchellgarlick.com and
+   consistencycrew.ca on Cloudflare. I can put the site at, say,
+   `chess.garlick.ca`. It's a DNS change on your domain, so I haven't done it
+   without asking.
+2. **Will the GitHub repo stay public?** Deploys without a token rely on
+   Cloudflare fetching the bundle from the public repo. If you make it private,
+   deploys need either a valid Cloudflare API token in the environment's
+   Network secrets, or the repo connected to Cloudflare Workers Builds (push to
+   deploy). The token saved earlier was rejected by Cloudflare as invalid, so
+   you may want to delete it from the environment's settings.
+3. **Who's in the family, roughly how strong is each person, and how much time
+   do they have?** That tunes the clove bands, the default rating, and whether
+   five cloves a day is the right target.
+4. **Should ratings be put on one scale** (see the table above)?
+5. **Should the leaderboard be handicapped** so the strongest player doesn't
+   always win the week?
+6. **Should I add an admin role** for you: reset passwords, remove accounts,
+   close sign-ups?
+7. **Rating goal and time frame** (for example "+150 blitz by spring"), so the
+   app can suggest a weekly plan.

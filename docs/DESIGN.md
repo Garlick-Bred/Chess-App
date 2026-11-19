@@ -127,8 +127,22 @@ Seconds-per-move drops with level (e.g. rook mate: 4.5 → 2.5 s).
 
 * The bulb is drawn cartoon-style: a bold dark outline, a tall neck, green
   stalks and a ground shadow. Empty cloves are dim taupe.
-* Each solved drill colours in one clove (centre first, then outward) in beige
-  with a rising liquid fill and a little pop.
+* Solves colour in cloves (centre first, then outward) with a rising liquid
+  fill. How much of a clove a solve is worth depends on **your rating**
+  (`shared/cloves.js`):
+
+  | Drill vs your rating | Example at 1300 | Clove value (levels 1-2) |
+  |---|---|---|
+  | Your level: less than 200 below you | Lucena, Philidor, Q vs P, two bishops | **1 clove** |
+  | Easy: 200-499 below you | Escort the pawn, opposition | **½ clove** |
+  | Warm-up: 500+ below you | Ladder, queen and rook mates | **¼ clove** |
+
+  Level 3 is worth 1.5x and the speed levels (4-5) 2x, capped at one clove, so
+  getting fast at an easy mate still pays. A hint or takeback halves the value.
+  At 1300, a full bulb takes about five drills at your level, or about thirteen
+  two-rook mates at level 3.
+* New players are placed by rating: warm-up drills start at level 3 and easy
+  ones at level 2. Changing your rating re-places drills you haven't played yet.
 * The 5th clove completes the bulb: the stalks shoot up and wiggle, the bulb
   bounces, glows gold and sparkles, and you earn **+50 points**.
 * Completing the bulb on consecutive days builds a 🔥 streak (badges at 3, 7

@@ -28,14 +28,16 @@ solve.
   there's a promotion picker.
 * **Points** for solving, efficiency and speed against par, with penalties for
   hints and takebacks. Ranks run from Sprout to Garlick Grandmaster.
-* **Daily Garlick bulb:** each solve colours in a clove; five complete the bulb
-  (+50 points), and the stalks shoot up while it bounces, glows and sparkles.
-  Completed bulbs build your streak.
+* **Daily Garlick bulb:** solves colour in cloves. A drill at your level
+  fills a whole clove; easy drills fill half and warm-ups a quarter, with more
+  at higher levels. Five cloves complete the bulb (+50 points): the stalks shoot
+  up while it bounces, glows and sparkles. Completed bulbs build your streak.
 * **26 badges**, a **family leaderboard** (weekly and all-time), **family
   records** (fastest pace per drill), and **stats** with pace trends and a
   30-day calendar.
-* **Accounts** with username and password. Optionally require a family invite
-  code to sign up.
+* **Family accounts** with username, password and chess rating (chess.com,
+  Lichess, FIDE, CFC, or a best guess). The rating sets your starting levels and
+  how much each drill fills your bulb. Sign-up needs the family invite code.
 * **Chess.com analysis** of your own games, which drives the "Recommended for
   you" cards. See [analysis/](analysis/) and
   [the report for ham_sandmitch](docs/reports/ham_sandmitch-endgames.md).
@@ -48,7 +50,18 @@ solve.
 |---|---|---|
 | ![](docs/screenshots/home.jpg) | ![](docs/screenshots/phone-play.jpg) | ![](docs/screenshots/family.jpg) |
 
-## Run it
+| Sign-up with rating | Drills worth part of a clove | Partly filled clove |
+|---|---|---|
+| ![](docs/screenshots/signup-rating.jpg) | ![](docs/screenshots/drills.jpg) | ![](docs/screenshots/result-partial-clove.jpg) |
+
+## Live site
+
+**https://garlick-endgames.garlick-mitchell.workers.dev**: a Cloudflare
+Worker with a D1 database, on Cloudflare's free plan. New accounts need the
+family invite code. Each person picks a username and password, and optionally
+their chess rating.
+
+## Run it locally
 
 Requires **Node 22.13 or newer** (it uses the built-in `node:sqlite`; there are
 no native modules to compile).
@@ -65,7 +78,8 @@ Development, with hot reload on http://localhost:5173:
 npm run dev
 ```
 
-Tests (grading, scoring, symmetry, the puzzle bank and the server):
+Tests (grading, scoring, cloves, symmetry, the puzzle bank, the server and the
+HTTP API):
 
 ```bash
 npm test
@@ -75,28 +89,38 @@ npm test
 
 | Variable | Default | Purpose |
 |---|---|---|
-| `PORT` | `8787` | HTTP port |
-| `DB_FILE` | `data/garlick.db` | SQLite file. Keep it on a persistent disk and back it up |
-| `INVITE_CODE` | *(empty)* | If set, new accounts need this code. **Set it if the app is on the internet** |
-| `COOKIE_SECURE` | *(empty)* | Set to `1` when served over HTTPS |
-| `TABLEBASE_URL` | Lichess | Point this at your own tablebase server if you run one |
+| `PORT` | `8787` | HTTP port (local server) |
+| `DB_FILE` | `data/garlick.db` | SQLite file (local server) |
+| `INVITE_CODE` | *(empty)* | If set, new accounts need this code. On Cloudflare it is a Worker secret |
+| `COOKIE_SECURE` | *(auto)* | Session cookies are Secure on HTTPS. Set to `1` to force it behind a TLS proxy |
+| `TABLEBASE_URL` | Lichess | Alternative tablebase endpoint |
 
-If the server sits behind a corporate or sandbox HTTPS proxy, run Node with
-`NODE_USE_ENV_PROXY=1`.
+## Deploying to Cloudflare
 
-### Hosting for the family
+The same API code (`server/api.js`) runs on Node with SQLite and on Cloudflare
+Workers with D1 (`worker/index.js`). The built client is embedded in the Worker
+bundle, so the deploy is a single script upload plus a D1 binding.
 
-It is a single Node process plus one SQLite file, so any small host with a
-persistent disk works: a Raspberry Pi or old laptop at home (with Tailscale for
-access from phones), Fly.io or Railway (with a volume), or a small VPS. Put it
-behind HTTPS and set `INVITE_CODE` and `COOKIE_SECURE=1`.
+* **With an API token** (Workers Scripts: Edit plus D1: Edit):
+  `CLOUDFLARE_API_TOKEN=... INVITE_CODE=... npm run deploy`. This creates or
+  reuses the D1 database, applies the schema, uploads the Worker and turns on
+  workers.dev. Leave out `INVITE_CODE` to keep the current one.
+* **Without a token**, as the live site was deployed: `npm run bundle` writes
+  `deploy/worker.js`. Commit it, and the Cloudflare connector fetches it from
+  this public repo by commit, checks its SHA-256 and uploads it. See
+  [deploy/README.md](deploy/README.md).
+
+The schema is created on first request too (`ensureSchema`), and new columns
+are added automatically, so deploys never need a manual migration step.
 
 ## How it works
 
 ```
 client/   React + Vite. Board (custom, pointer events), Garlick bulb (SVG), pages
-server/   Express + node:sqlite. Accounts, attempts, scoring, leaderboard,
-          caching proxy for the Lichess tablebase
+server/   Fetch-style API (accounts, attempts, scoring, leaderboard, caching
+          tablebase proxy) + Node server on node:sqlite
+worker/   Cloudflare Worker entry + D1 adapter (same API)
+deploy/   Built Worker bundle for token-free deploys
 shared/   Code used by both sides: drill catalog, grading, scoring,
           achievements, board symmetries, and the 660-position puzzle bank
 scripts/  generate-puzzles.mjs (builds the bank, verified against the
