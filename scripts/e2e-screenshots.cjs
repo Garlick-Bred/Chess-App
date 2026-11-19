@@ -109,6 +109,11 @@ async function solve(page, drill, opts = {}) {
   await page.waitForSelector('.hero');
   await page.waitForTimeout(400);
   await page.screenshot({ path: `${OUT}/02-home-new.png` });
+  // Link the chess.com account so the home page shows the game-based insights.
+  await page.goto(`${BASE}/#/settings`);
+  await page.fill('input[placeholder="e.g. ham_sandmitch"]', 'ham_sandmitch');
+  await page.click('button:has-text("Save")');
+  await page.waitForSelector('.form-ok');
 
   await page.goto(`${BASE}/#/drills`);
   await page.waitForSelector('.drill-card');

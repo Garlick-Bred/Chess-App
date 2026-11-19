@@ -75,7 +75,44 @@ level material 45%, a pawn down 42%.
 
 ## Exact tablebase audit (7 or fewer pieces)
 
-_Being finalised: the tablebase pass over your games is still finishing._
+This section uses no engine estimates. Every move you made with 7 or fewer
+pieces on the board (2,764 positions in 226 games) was checked against the
+tablebase. A **result-changing move** turned a win into a draw or loss, or a
+draw into a loss.
+
+| Type when it got down to 7 pieces | Games | Tablebase wins → you won | Tablebase draws → you held | Result-changing moves |
+|---|---|---|---|---|
+| Rook + pawns | 63 | 38 → **23 (61%)** | 12 → 7 | 22 |
+| Mixed pieces | 58 | 37 → 26 (70%) | 2 → 1 | 21 |
+| Minor pieces + pawns | 47 | 25 → 17 (68%) | 10 → 5 | 15 |
+| **King + pawns** | **35** | 21 → **11 (52%)** | 4 → 2 | **21** |
+| Queen vs pawns / lone king | 18 | 13 → 11 (85%) | 2 → 1 | 0 |
+| Queen endings | 5 | 3 → 0 | 2 → 1 | 3 |
+| **All** | **226** | **137 → 88 (64%)** | **32 → 17 (53%)** | **82** |
+
+What this says:
+
+* **One in three theoretically won simple endgames does not become a win.**
+  With perfect knowledge available, 49 wins slipped away.
+* **Pawn endings are the worst**: 21 result-changing moves in 35 games, and
+  only 11 of 21 won positions converted. Of the other 10, 4 were lost on time;
+  the rest went wrong over the board.
+* **Queen vs pawns or a lone king: no technical errors at all.** The two you
+  didn't win were both lost **on time**. That's the clock again.
+* The most common small endings you reach are K+2P vs K+3P and K+3P vs K+2P
+  (14 each) and K+R+2P vs K+R+P (13).
+
+Some examples of result-changing moves (open the games on chess.com to
+replay them):
+
+| Game | Ending | Move | Effect |
+|---|---|---|---|
+| [rapid](https://www.chess.com/game/live/116890774123) | K+3P vs K+2P | g4, later Kg4 | win → draw → loss (resigned) |
+| [rapid](https://www.chess.com/game/live/30415186987) | K+3P vs K+2P | Kf3, then Kf2 | win → draw → loss (on time) |
+| [blitz](https://www.chess.com/game/live/109093865892) | K+R+2P vs K+R+P | f4, later Kf7 | win → draw → loss (resigned) |
+| [blitz](https://www.chess.com/game/live/6411182436) | K+R+N+P vs K+R+P | f4, Ra4, Kg5 | win → draw → loss (mated) |
+| [daily](https://www.chess.com/game/daily/360096787) | K+R+2P vs K+R+P | c5, Rb7 | win → draw (agreed) |
+| [blitz](https://www.chess.com/game/live/109092057818) | K+B+2P vs K+2P | Bc1, Bxb2 | win → draw |
 
 ## The clock
 

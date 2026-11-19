@@ -9,14 +9,27 @@
       "facts": [
         "227 endgames lost on time, 57 of them with a winning position still on the board.",
         "Pawn endings: you scored 52.6% where the engine expected 63% - the biggest gap per game of any endgame type.",
+        "Tablebase check: of 137 theoretically won simple endings (7 pieces or fewer) you won 88 - a third slipped away.",
         "You stalemated an opponent 10 times while ahead in material, 4 of them with a queen against a bare king.",
         "From a level endgame you score 41%; good technique should push that above 50%."
       ],
       "recommended": [
-        { "drillId": "kpk-draw", "reason": "pawn endings are your biggest gap per game (52.6% scored vs 63% expected)." },
-        { "drillId": "kqk", "reason": "you stalemated opponents 10 times while ahead - this drill flags stalemates and builds speed." },
-        { "drillId": "kpk-win", "reason": "you converted only 60% of winning pawn endings." },
-        { "drillId": "lucena", "reason": "you reach pure rook endings in about 1 in 8 endgames and convert 65% of the winning ones." }
+        {
+          "drillId": "kpk-draw",
+          "reason": "pawn endings are your biggest gap per game (52.6% scored vs 63% expected)."
+        },
+        {
+          "drillId": "kqk",
+          "reason": "you stalemated opponents 10 times while ahead - this drill flags stalemates and builds speed."
+        },
+        {
+          "drillId": "kpk-win",
+          "reason": "the tablebase says you won only 11 of 21 theoretically won pawn endings."
+        },
+        {
+          "drillId": "lucena",
+          "reason": "you reach pure rook endings in about 1 in 8 endgames and convert 65% of the winning ones."
+        }
       ]
     }
   }
