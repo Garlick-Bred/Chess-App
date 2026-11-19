@@ -26,7 +26,7 @@ export default function Header({ route }: { route: Route }) {
       </a>
       <nav className="nav">
         {NAV.map((n) => (
-          <a key={n.page} href={`#/${n.page === 'home' ? '' : n.page}`} className={route.page === n.page ? 'active' : ''}>
+          <a key={n.page} href={`#/${n.page === 'home' ? '' : n.page}`} className={route.page === n.page ? 'active' : ''} title={n.label}>
             <span className="nav-icon">{n.icon}</span>
             <span className="nav-label">{n.label}</span>
           </a>

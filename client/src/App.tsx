@@ -36,6 +36,11 @@ function parseHash(): Route {
   return { page: page || 'home', arg, query: new URLSearchParams(qs ?? '') };
 }
 
+/** The hashed name of the app's main script, which changes with every deploy. */
+function scriptName(doc: Document): string | null {
+  return doc.querySelector('script[type="module"][src]')?.getAttribute('src') ?? null;
+}
+
 export function go(path: string) {
   window.location.hash = path.startsWith('#') ? path : `#/${path.replace(/^\//, '')}`;
 }
@@ -104,6 +109,38 @@ export default function App() {
   useEffect(() => {
     void refresh();
   }, [refresh]);
+
+  // Pick up new deploys in tabs that stay open for days (phones keep them).
+  useEffect(() => {
+    const own = scriptName(document);
+    let stale = false;
+    const check = async () => {
+      try {
+        const html = await (await fetch('/', { cache: 'no-store' })).text();
+        const live = scriptName(new DOMParser().parseFromString(html, 'text/html'));
+        stale = !!own && !!live && live !== own;
+      } catch {
+        /* offline: try again later */
+      }
+      // Reload right away unless a puzzle or lesson is in progress.
+      if (stale && !/^#\/(play|lesson)\b/.test(window.location.hash)) window.location.reload();
+    };
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') void check();
+    };
+    // Moving to another page is a safe moment to load the new version.
+    const onHash = () => {
+      if (stale) window.location.reload();
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    window.addEventListener('hashchange', onHash);
+    const timer = setInterval(() => void check(), 15 * 60 * 1000);
+    return () => {
+      document.removeEventListener('visibilitychange', onVisible);
+      window.removeEventListener('hashchange', onHash);
+      clearInterval(timer);
+    };
+  }, []);
 
   const logout = useCallback(async () => {
     await api.post('/api/auth/logout').catch(() => undefined);

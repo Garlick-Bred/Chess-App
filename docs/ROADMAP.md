@@ -13,6 +13,9 @@
 * Written hints and piece hints, built from rules on the tablebase (no AI).
 * Lessons for every drill, offered after a failed puzzle, with a one-clove
   replay.
+* "Keep going or done for today?" when the bulb fills, with a wrap-up page.
+* Phone layout: a bottom tab bar (all six sections fit), nothing scrolls
+  sideways down to 320 px wide, and open tabs reload themselves after a deploy.
 
 ## Still worth building
 
