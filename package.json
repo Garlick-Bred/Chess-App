@@ -1,8 +1,8 @@
 {
-  "name": "garlic-endgames",
+  "name": "garlick-endgames",
   "private": true,
   "version": "0.1.0",
-  "description": "Endgame drill trainer with tablebase-graded moves, family accounts and a daily garlic bulb.",
+  "description": "Endgame drill trainer with tablebase-graded moves, family accounts and a daily Garlick bulb.",
   "type": "module",
   "engines": {
     "node": ">=22.13"

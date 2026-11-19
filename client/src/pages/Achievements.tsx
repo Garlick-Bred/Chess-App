@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { api } from '../api';
+import { AchIcon } from '../components/ui';
 
 interface Ach {
   id: string;
@@ -28,7 +29,9 @@ export default function AchievementsPage() {
       <div className="badge-grid">
         {list.map((a) => (
           <div key={a.id} className={`card badge-card ${a.unlockedAt ? 'got' : 'locked'}`}>
-            <div className="badge-icon">{a.icon}</div>
+            <div className="badge-icon">
+              <AchIcon icon={a.icon} size={44} />
+            </div>
             <b>{a.name}</b>
             <small className="muted">{a.desc}</small>
             {a.unlockedAt && <small className="badge-date">{new Date(a.unlockedAt).toLocaleDateString()}</small>}

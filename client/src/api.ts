@@ -25,7 +25,7 @@ export const api = {
   put: <T>(url: string, body?: unknown) => request<T>('PUT', url, body ?? {}),
 };
 
-/** Local calendar day (YYYY-MM-DD) - the garlic bulb resets at local midnight. */
+/** Local calendar day (YYYY-MM-DD) - the Garlick bulb resets at local midnight. */
 export function localDay(d = new Date()): string {
   const y = d.getFullYear();
   const m = String(d.getMonth() + 1).padStart(2, '0');

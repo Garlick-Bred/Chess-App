@@ -1,6 +1,6 @@
 // End-to-end walkthrough with Playwright: registers an account, solves drills
 // by tapping and by dragging pieces, triggers a blunder + takeback, fills the
-// daily garlic bulb, and screenshots every page.
+// daily Garlick bulb, and screenshots every page.
 //   node scripts/e2e-screenshots.cjs <outDir> [baseUrl]
 const { chromium, devices } = require('playwright');
 const fs = require('fs');
@@ -104,7 +104,7 @@ async function solve(page, drill, opts = {}) {
   await page.screenshot({ path: `${OUT}/01-login.png` });
   await page.fill('input[autocomplete=username]', 'mitch');
   await page.fill('input[placeholder="What the family sees"]', 'Mitch');
-  await page.fill('input[type=password]', 'garlic123');
+  await page.fill('input[type=password]', 'garlick123');
   await page.click('button:has-text("Create account")');
   await page.waitForSelector('.hero');
   await page.waitForTimeout(400);

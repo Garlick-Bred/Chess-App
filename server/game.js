@@ -1,6 +1,6 @@
 // Server-side game logic: record attempts, recompute points with the shared
-// scoring rules, level up drills, fill garlic cloves and unlock achievements.
-import { DRILLS, DRILL_BY_ID, MAX_LEVEL, parSeconds, holdMovesFor } from '../shared/drills.js';
+// scoring rules, level up drills, fill Garlick cloves and unlock achievements.
+import { DRILLS, DRILL_BY_ID, MAX_LEVEL, parSeconds } from '../shared/drills.js';
 import { scoreAttempt, qualifiesForLevel, SOLVES_TO_LEVEL, BULB_CLOVES, BULB_BONUS, PB_BONUS_SHARE, bulbStreak, rankFor, masteryStars, addDays } from '../shared/scoring.js';
 import { ACHIEVEMENTS, newlyUnlocked } from '../shared/achievements.js';
 import { GRADES } from '../shared/grading.js';
@@ -92,8 +92,9 @@ export function recordAttempt(db, user, body) {
   const par = parSeconds(drill, puzzle, level);
   const success = !!body.success;
   const userMoves = int(body.userMoves, 0, 200);
-  const minMoves = drill.goal === 'hold' ? holdMovesFor(drill, level) : 1;
-  if (success && userMoves < minMoves) throw httpError(400, 'Not enough moves for a solve');
+  // A hold drill can also end early in a secured draw (pawn captured, stalemate,
+  // repetition), so any solve needs at least one move.
+  if (success && userMoves < 1) throw httpError(400, 'Not enough moves for a solve');
   const grades = {};
   for (const g of GRADES) grades[g] = int(body.grades?.[g], 0, 200);
   const attempt = {
@@ -177,7 +178,7 @@ export function recordAttempt(db, user, body) {
        ON CONFLICT(user_id, drill_id) DO UPDATE SET level = excluded.level, qualifying = excluded.qualifying`,
     ).run(user.id, drill.id, newLevel, qualifying);
 
-    // Garlic bulb: every solve fills a clove.
+    // Garlick bulb: every solve fills a clove.
     let bulbCompletedNow = false;
     if (success) {
       db.prepare(`INSERT INTO days (user_id, day, cloves) VALUES (?, ?, 1) ON CONFLICT(user_id, day) DO UPDATE SET cloves = cloves + 1`).run(user.id, day);

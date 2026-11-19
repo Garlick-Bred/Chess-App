@@ -4,6 +4,7 @@ import { addDays } from '@shared/scoring.js';
 import { api, localDay } from '../api';
 import { useApp } from '../App';
 import { Material, Sparkline, Stars } from '../components/ui';
+import GarlickBulb from '../components/GarlickBulb';
 
 interface Stats {
   perDrill: { drillId: string; attempts: number; solves: number; successRate: number; efficiency: number | null; avgSecondsPerMove: number | null; bestSecondsPerMove: number | null; points: number }[];
@@ -41,12 +42,12 @@ export default function StatsPage() {
             const c = dayMap.get(d)?.cloves ?? 0;
             return (
               <div key={d} className={`cal-day c${Math.min(5, c)} ${dayMap.get(d)?.bulb_done ? 'full' : ''}`} title={`${d}: ${c} clove${c === 1 ? '' : 's'}`}>
-                {dayMap.get(d)?.bulb_done ? '🧄' : ''}
+                {dayMap.get(d)?.bulb_done ? <GarlickBulb filled={5} size={14} celebrate={false} /> : null}
               </div>
             );
           })}
         </div>
-        <div className="small muted">Darker = more cloves. A garlic means the full bulb.</div>
+        <div className="small muted">Darker = more cloves. A Garlick bulb means the full five cloves.</div>
       </section>
 
       <section className="card">

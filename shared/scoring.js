@@ -1,4 +1,4 @@
-// Points, levels, ranks and the daily garlic bulb. Pure functions so the
+// Points, levels, ranks and the daily Garlick bulb. Pure functions so the
 // server can recompute everything the client shows.
 import { efficiency } from './grading.js';
 import { MAX_LEVEL } from './drills.js';
@@ -86,8 +86,8 @@ export const RANKS = [
   { min: 750, name: 'Clove' },
   { min: 2000, name: 'Bulb' },
   { min: 5000, name: 'Braid' },
-  { min: 10000, name: 'Garlic Knight' },
-  { min: 20000, name: 'Garlic Grandmaster' },
+  { min: 10000, name: 'Garlick Knight' },
+  { min: 20000, name: 'Garlick Grandmaster' },
 ];
 
 export function rankFor(points) {

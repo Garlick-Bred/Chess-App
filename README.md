@@ -1,9 +1,12 @@
-# 🧄 Garlic Endgames
+<img src="client/public/garlick.svg" width="56" align="left" alt="" />
+
+# Garlick Endgames
+
 
 An endgame drill trainer for the family. Drill specific endgames (rook mate,
 queen mate, Lucena, Philidor, bishop + knight and more) or play a random mix.
 Every move is checked against a perfect endgame tablebase, so you get faster,
-earn points and badges, and fill one clove of the daily garlic bulb with every
+earn points and badges, and fill one clove of the daily Garlick bulb with every
 solve.
 
 ![Playing a drill](docs/screenshots/play-graded.jpg)
@@ -24,9 +27,10 @@ solve.
   glows, legal moves show as dots and rings, the computer's moves slide in, and
   there's a promotion picker.
 * **Points** for solving, efficiency and speed against par, with penalties for
-  hints and takebacks. Ranks run from Sprout to Garlic Grandmaster.
-* **Daily garlic bulb:** each solve fills a clove; five fill the bulb (+50
-  points) with a bounce, glow, sprout and sparkles, and keep your streak going.
+  hints and takebacks. Ranks run from Sprout to Garlick Grandmaster.
+* **Daily Garlick bulb:** each solve colours in a clove; five complete the bulb
+  (+50 points), and the stalks shoot up while it bounces, glows and sparkles.
+  Completed bulbs build your streak.
 * **26 badges**, a **family leaderboard** (weekly and all-time), **family
   records** (fastest pace per drill), and **stats** with pace trends and a
   30-day calendar.
@@ -72,7 +76,7 @@ npm test
 | Variable | Default | Purpose |
 |---|---|---|
 | `PORT` | `8787` | HTTP port |
-| `DB_FILE` | `data/garlic.db` | SQLite file. Keep it on a persistent disk and back it up |
+| `DB_FILE` | `data/garlick.db` | SQLite file. Keep it on a persistent disk and back it up |
 | `INVITE_CODE` | *(empty)* | If set, new accounts need this code. **Set it if the app is on the internet** |
 | `COOKIE_SECURE` | *(empty)* | Set to `1` when served over HTTPS |
 | `TABLEBASE_URL` | Lichess | Point this at your own tablebase server if you run one |
@@ -90,7 +94,7 @@ behind HTTPS and set `INVITE_CODE` and `COOKIE_SECURE=1`.
 ## How it works
 
 ```
-client/   React + Vite. Board (custom, pointer events), garlic bulb (SVG), pages
+client/   React + Vite. Board (custom, pointer events), Garlick bulb (SVG), pages
 server/   Express + node:sqlite. Accounts, attempts, scoring, leaderboard,
           caching proxy for the Lichess tablebase
 shared/   Code used by both sides: drill catalog, grading, scoring,

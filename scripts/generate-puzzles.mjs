@@ -30,7 +30,7 @@ async function probe(fen) {
   const url = `https://tablebase.lichess.ovh/standard?fen=${encodeURIComponent(fen)}`;
   for (let attempt = 0; attempt < 6; attempt++) {
     try {
-      const res = await fetch(url, { headers: { 'User-Agent': 'garlic-endgames-puzzle-generator/0.1' } });
+      const res = await fetch(url, { headers: { 'User-Agent': 'garlick-endgames-puzzle-generator/0.1' } });
       if (res.status === 429) {
         console.log('  rate limited, waiting 60s');
         await sleep(60000);

@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
 import type { AttemptResult } from '../api';
 import { sfx } from '../sound';
-import GarlicBulb from './GarlicBulb';
-import { fmtTime } from './ui';
+import GarlickBulb from './GarlickBulb';
+import { fmtTime, AchIcon } from './ui';
 
 function CountUp({ to, ms = 900 }: { to: number; ms?: number }) {
   const [v, setV] = useState(0);
@@ -52,7 +52,7 @@ export default function ResultModal({ drill, level, outcome, result, submitError
         {ok && (
           <div className="result-bulb">
             {result ? (
-              <GarlicBulb
+              <GarlickBulb
                 key="final"
                 filled={Math.min(5, cloves)}
                 from={gotClove ? Math.min(5, prevCloves) : undefined}
@@ -60,7 +60,7 @@ export default function ResultModal({ drill, level, outcome, result, submitError
                 onClove={(n) => (n >= 5 ? sfx.bulb() : sfx.clove())}
               />
             ) : (
-              <GarlicBulb key="pending" filled={Math.min(5, prevCloves)} size={128} celebrate={false} />
+              <GarlickBulb key="pending" filled={Math.min(5, prevCloves)} size={128} celebrate={false} />
             )}
             <div className="bulb-caption">
               {result?.day.bulbCompletedNow ? (
@@ -91,7 +91,9 @@ export default function ResultModal({ drill, level, outcome, result, submitError
               ))}
               {result.day.bulbCompletedNow && (
                 <li className="bulb-line" style={{ animationDelay: `${0.15 + result.breakdown.length * 0.08}s` }}>
-                  <span>🧄 Full bulb bonus</span>
+                  <span className="row gap">
+                    <GarlickBulb filled={5} size={16} celebrate={false} /> Full bulb bonus
+                  </span>
                   <b>+{result.day.bulbBonus}</b>
                 </li>
               )}
@@ -139,7 +141,9 @@ export default function ResultModal({ drill, level, outcome, result, submitError
           <div className="new-achievements">
             {result.newAchievements.map((a, i) => (
               <div key={a.id} className="achievement-pop" style={{ animationDelay: `${0.6 + i * 0.25}s` }}>
-                <span className="ach-icon">{a.icon}</span>
+                <span className="ach-icon">
+                  <AchIcon icon={a.icon} size={34} />
+                </span>
                 <div>
                   <b>{a.name}</b>
                   <small>{a.desc}</small>

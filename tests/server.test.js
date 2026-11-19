@@ -45,9 +45,12 @@ describe('attempts', () => {
     expect(r.points).toBe(0);
     expect(r.day.cloves).toBe(0);
   });
-  it('rejects a hold "solve" with too few moves and clamps level to what is unlocked', () => {
+  it('accepts a hold drill that secured the draw early, rejects a zero-move solve, clamps level', () => {
     const { db, user } = setup();
-    expect(() => recordAttempt(db, user, solve({ drillId: 'kpk-draw', userMoves: 2 }))).toThrow();
+    const early = recordAttempt(db, user, solve({ drillId: 'kpk-draw', userMoves: 3, reason: 'Draw secured' }));
+    expect(early.points).toBeGreaterThan(0);
+    expect(early.day.cloves).toBe(1);
+    expect(() => recordAttempt(db, user, solve({ userMoves: 0 }))).toThrow();
     expect(recordAttempt(db, user, solve({ level: 5 })).progress.level).toBe(1);
   });
   it('unlocks achievements', () => {
@@ -66,8 +69,8 @@ describe('attempts', () => {
 
 describe('auth + validation', () => {
   it('verifies scrypt hashes', () => {
-    const h = hashPassword('garlic!');
-    expect(verifyPassword('garlic!', h)).toBe(true);
+    const h = hashPassword('garlick!');
+    expect(verifyPassword('garlick!', h)).toBe(true);
     expect(verifyPassword('onion', h)).toBe(false);
   });
   it('only proxies small, well-formed positions to the tablebase', () => {

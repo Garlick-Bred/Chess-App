@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { DRILLS } from '@shared/drills.js';
 import { api, localDay } from '../api';
 import { useApp } from '../App';
-import GarlicBulb from '../components/GarlicBulb';
+import GarlickBulb from '../components/GarlickBulb';
 import { Material } from '../components/ui';
 
 interface Board {
@@ -57,7 +57,7 @@ export default function LeaderboardPage() {
               </small>
             </span>
             <span title={`${p.todayCloves}/5 cloves today`}>
-              <GarlicBulb filled={p.todayCloves} size={22} celebrate={false} />
+              <GarlickBulb filled={p.todayCloves} size={22} celebrate={false} />
             </span>
             {p.streak > 0 && <span className="flame small">🔥{p.streak}</span>}
             <b className="pts">{(tab === 'week' ? p.weekPoints : p.points).toLocaleString()}</b>

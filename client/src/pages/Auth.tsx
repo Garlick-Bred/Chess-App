@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { api } from '../api';
 import { recentAccounts } from '../App';
-import GarlicBulb from '../components/GarlicBulb';
+import GarlickBulb from '../components/GarlickBulb';
 
 export default function AuthPage({ onDone }: { onDone: () => Promise<void> }) {
   const [mode, setMode] = useState<'login' | 'register'>(recentAccounts().length ? 'login' : 'register');
@@ -40,9 +40,9 @@ export default function AuthPage({ onDone }: { onDone: () => Promise<void> }) {
     <div className="auth">
       <div className="auth-card">
         <div className="auth-hero">
-          <GarlicBulb filled={3} size={92} celebrate={false} />
+          <GarlickBulb filled={3} size={92} celebrate={false} />
           <h1>
-            Garlic <b>Endgames</b>
+            Garlick <b>Endgames</b>
           </h1>
           <p className="muted">Drill the endgames that decide your games. Fill a clove with every solve.</p>
         </div>

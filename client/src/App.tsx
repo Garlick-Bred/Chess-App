@@ -2,6 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useState } from 'rea
 import { api, ApiError, localDay, type Me } from './api';
 import { setSoundEnabled } from './sound';
 import Header from './components/Header';
+import GarlickBulb from './components/GarlickBulb';
 import AuthPage from './pages/Auth';
 import HomePage from './pages/Home';
 import DrillsPage from './pages/Drills';
@@ -89,7 +90,12 @@ export default function App() {
     go('/');
   }, []);
 
-  if (state === 'loading') return <div className="splash">🧄</div>;
+  if (state === 'loading')
+    return (
+      <div className="splash">
+        <GarlickBulb filled={5} size={80} celebrate={false} />
+      </div>
+    );
   if (state === 'out' || !me) return <AuthPage onDone={refresh} />;
 
   let page;

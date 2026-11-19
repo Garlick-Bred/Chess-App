@@ -4,7 +4,7 @@ import { BULB_BONUS } from '@shared/scoring.js';
 import insights from '@shared/insights.json';
 import { api, localDay } from '../api';
 import { go, useApp } from '../App';
-import GarlicBulb from '../components/GarlicBulb';
+import GarlickBulb from '../components/GarlickBulb';
 import { Material, Stars, TierChip, LevelDots, fmtTime } from '../components/ui';
 
 export const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`;
@@ -79,7 +79,7 @@ export default function HomePage() {
           </div>
         </div>
         <div className="hero-bulb">
-          <GarlicBulb filled={me.today.cloves} size={170} />
+          <GarlickBulb filled={me.today.cloves} size={170} />
           <div className="bulb-count">
             <b>{Math.min(5, me.today.cloves)}</b>/5 cloves
           </div>

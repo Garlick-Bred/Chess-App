@@ -1,6 +1,14 @@
 import { TIERS, MAX_LEVEL } from '@shared/drills.js';
 import bank from '@shared/puzzles.json';
 import { PIECE_IMG } from './Board';
+import GarlickBulb from './GarlickBulb';
+
+/** Badge icon: 'garlick-N' draws a Garlick bulb with N cloves, otherwise an emoji. */
+export function AchIcon({ icon, size = 40 }: { icon: string; size?: number }) {
+  const m = /^garlick-(\d)$/.exec(icon);
+  if (m) return <GarlickBulb filled={Number(m[1])} size={size * 0.85} celebrate={false} />;
+  return <>{icon}</>;
+}
 
 export function Stars({ n, max = 5 }: { n: number; max?: number }) {
   return (

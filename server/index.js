@@ -1,4 +1,4 @@
-// Garlic Endgames server: accounts, attempts/scoring, leaderboard, a caching
+// Garlick Endgames server: accounts, attempts/scoring, leaderboard, a caching
 // tablebase proxy, and the built client.
 import fs from 'node:fs';
 import path from 'node:path';
@@ -11,7 +11,7 @@ import { recordAttempt, getProgress, getTotals, getDay, getAchievements, getStat
 
 const ROOT = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 const PORT = Number(process.env.PORT ?? 8787);
-const DB_FILE = process.env.DB_FILE ?? path.join(ROOT, 'data', 'garlic.db');
+const DB_FILE = process.env.DB_FILE ?? path.join(ROOT, 'data', 'garlick.db');
 const INVITE_CODE = process.env.INVITE_CODE ?? '';
 const SECURE_COOKIES = process.env.COOKIE_SECURE === '1';
 const AVATARS = ['🧄', '♞', '♛', '♜', '♝', '♚', '🦉', '🐢', '🦊', '🐼', '🐸', '🦁', '🐙', '🌶️', '🍄', '🌟'];
@@ -172,5 +172,5 @@ function publicUser(u) {
 
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   const app = createApp();
-  app.listen(PORT, () => console.log(`Garlic Endgames listening on http://localhost:${PORT}`));
+  app.listen(PORT, () => console.log(`Garlick Endgames listening on http://localhost:${PORT}`));
 }

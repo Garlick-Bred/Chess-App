@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { go, useApp, type Route } from '../App';
-import GarlicBulb from './GarlicBulb';
+import GarlickBulb from './GarlickBulb';
 
 const NAV = [
   { page: 'home', label: 'Home', icon: '⌂' },
@@ -16,9 +16,11 @@ export default function Header({ route }: { route: Route }) {
   return (
     <header className="topbar">
       <a className="brand" href="#/">
-        <span className="brand-mark">🧄</span>
+        <span className="brand-mark">
+          <GarlickBulb filled={5} size={24} celebrate={false} />
+        </span>
         <span className="brand-name">
-          Garlic <b>Endgames</b>
+          Garlick <b>Endgames</b>
         </span>
       </a>
       <nav className="nav">
@@ -31,7 +33,7 @@ export default function Header({ route }: { route: Route }) {
       </nav>
       <div className="topbar-right">
         <div className="mini-bulb" title={`${me.today.cloves}/5 cloves today`}>
-          <GarlicBulb filled={me.today.cloves} size={26} celebrate={false} />
+          <GarlickBulb filled={me.today.cloves} size={26} celebrate={false} />
         </div>
         <div className="points-pill" title="Total points">
           {me.totals.points.toLocaleString()}

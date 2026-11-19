@@ -45,7 +45,7 @@ export async function lookup(db, fen) {
     for (let attempt = 0; attempt < 3; attempt++) {
       try {
         const res = await fetch(url, {
-          headers: { 'User-Agent': 'garlic-endgames/0.1 (family endgame trainer)' },
+          headers: { 'User-Agent': 'garlick-endgames/0.1 (family endgame trainer)' },
           signal: AbortSignal.timeout(8000),
         });
         if (res.status === 429) {

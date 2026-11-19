@@ -121,14 +121,16 @@ Seconds-per-move drops with level (e.g. rook mate: 4.5 → 2.5 s).
   and no takebacks, plus beating par at levels 4–5.
 * **Mastery stars** (0–5) follow the level; 5 stars means "Mastered".
 * **Ranks** by total points: Sprout → Seedling (250) → Clove (750) → Bulb
-  (2,000) → Braid (5,000) → Garlic Knight (10,000) → Garlic Grandmaster (20,000).
+  (2,000) → Braid (5,000) → Garlick Knight (10,000) → Garlick Grandmaster (20,000).
 
-## 6. The daily garlic bulb
+## 6. The daily Garlick bulb
 
-* Each solved drill fills one clove (centre first, then outward) with a rising
-  liquid fill and a little pop.
-* The 5th clove completes the bulb: it bounces, glows gold, sprouts and
-  sparkles, and you earn **+50 points**.
+* The bulb is drawn cartoon-style: a bold dark outline, a tall neck, green
+  stalks and a ground shadow. Empty cloves are dim taupe.
+* Each solved drill colours in one clove (centre first, then outward) in beige
+  with a rising liquid fill and a little pop.
+* The 5th clove completes the bulb: the stalks shoot up and wiggle, the bulb
+  bounces, glows gold and sparkles, and you earn **+50 points**.
 * Completing the bulb on consecutive days builds a 🔥 streak (badges at 3, 7
   and 30 days).
 * The day resets at **your local midnight**.
