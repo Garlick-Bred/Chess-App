@@ -114,6 +114,10 @@ zeroing move that keeps the win counts as progress.
 | Piece hint | −20% each: highlights which piece to move, not where |
 | Takeback | −25% each |
 | New personal-best pace | +10% (after 3 solves of that drill) |
+| Challenge | up to +50% of base for a puzzle rated above your endgame rating (full at 400+ above) |
+| Solve streak | from the 3rd solve in a row without a failure, +10% of base per solve, max +50% |
+| Golden clove | half of base (min 10), about 1 solve in 8 at your level |
+| Full bulb | +50, plus 10 per day of the streak you bring into today (max +150) |
 | Floor | a solve is always worth at least 20% of base. A failure is worth 0. |
 | Replay after a lesson | the total is halved, and there is no perfect bonus |
 
@@ -135,8 +139,16 @@ Seconds-per-move drops with level (e.g. rook mate: 4.5 → 2.5 s).
 * **Level up** after 3 qualifying solves at your current level: ≥ 70% efficiency
   and no takebacks, plus beating par at levels 4–5.
 * **Mastery stars** (0–5) follow the level; 5 stars means "Mastered".
-* **Ranks** by total points: Sprout → Seedling (250) → Clove (750) → Bulb
-  (2,000) → Braid (5,000) → Garlick Knight (10,000) → Garlick Grandmaster (20,000).
+* **The Garlick Path** (`shared/path.js`) replaces ranks. Points move you
+  along a map of stages: 100 points to reach 1-2, then each stage costs 40
+  more than the last (140, 180, ...; capped at 1,500). Five stages make a
+  world, each with its own theme: 🌱 Garlic Patch, 🏘️ Pawn Village,
+  🏰 Rook Towers, ⛪ Bishop's Cathedral, 🌲 Knight's Forest, 👑 Queen's Palace,
+  🏔️ Grandmaster Summit, then endless 🌟 Legend worlds. World 2 starts at 900
+  points, World 7 ends at about 27,000 (roughly 3-4 months of daily bulbs).
+  The result screen shows the bar moving and celebrates new stages and
+  worlds; the header shows your stage. The path is separate from the endgame
+  rating: points reward effort and consistency, the rating measures skill.
 
 ## 6. The daily Garlick bulb
 

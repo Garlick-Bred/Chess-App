@@ -40,6 +40,9 @@ export const ACHIEVEMENTS = [
   { id: 'shield-1', name: 'Braided Shield', icon: '🛡️', desc: 'Weave a streak shield from extra cloves.', check: (c) => !!c.events?.shieldEarned },
   { id: 'repair-1', name: 'Second Wind', icon: '💨', desc: 'Repair a broken streak with a double bulb.', check: (c) => !!c.events?.repaired },
   { id: 'cloves-100', name: 'Clove Collector', icon: '🧺', desc: 'Solve 100 drills.', check: (c) => c.totals.solves >= 100 },
+  { id: 'world-2', name: 'Pawn Village', icon: '🏘️', desc: 'Reach World 2 on the Garlick Path.', check: (c) => (c.totals.path?.world ?? 1) >= 2 },
+  { id: 'world-4', name: "Bishop's Cathedral", icon: '⛪', desc: 'Reach World 4 on the Garlick Path.', check: (c) => (c.totals.path?.world ?? 1) >= 4 },
+  { id: 'world-7', name: 'Grandmaster Summit', icon: '🏔️', desc: 'Reach World 7 on the Garlick Path.', check: (c) => (c.totals.path?.world ?? 1) >= 7 },
   { id: 'points-1k', name: 'Four Digits', icon: '💯', desc: 'Earn 1,000 points.', check: (c) => c.totals.points >= 1000 },
   { id: 'points-10k', name: 'Garlick Royalty', icon: '🏰', desc: 'Earn 10,000 points.', check: (c) => c.totals.points >= 10000 },
 ];

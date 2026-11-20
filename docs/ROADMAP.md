@@ -20,6 +20,8 @@
   endgame rating, and full cloves for drills at your level.
 * Streak shields (garlic braid), streak repair with a double bulb, and golden
   cloves.
+* The Garlick Path: points move you through stages and themed worlds
+  (replacing ranks), with challenge, solve-streak and daily-streak bonuses.
 
 ## Still worth building
 

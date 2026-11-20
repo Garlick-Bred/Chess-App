@@ -254,6 +254,44 @@ describe('streak shields, repairs and golden cloves', () => {
   });
 });
 
+describe('points path', () => {
+  const never = { rng: () => 0.99 };
+  it('reports progress along the path and stage-ups', async () => {
+    const { store, user } = await setup(800);
+    const r = await recordAttempt(store, user, solve(), never);
+    expect(r.path.after.label).toBe(r.totals.path.label);
+    expect(r.path.after.index).toBeGreaterThanOrEqual(r.path.before.index);
+    let last = r;
+    for (let i = 0; i < 4; i++) last = await recordAttempt(store, user, solve(), never);
+    expect(last.totals.points).toBeGreaterThanOrEqual(100);
+    expect((await getTotals(store, user.id, '2026-11-19')).path.label).not.toBe('1-1');
+  });
+  it('adds a solve-streak bonus from the third solve in a row', async () => {
+    const { store, user } = await setup(800);
+    const label = (r) => r.breakdown.find((b) => b.label.startsWith('🔥 Solve streak'));
+    expect(label(await recordAttempt(store, user, solve(), never))).toBeUndefined();
+    await recordAttempt(store, user, solve(), never);
+    expect(label(await recordAttempt(store, user, solve(), never)).label).toBe('🔥 Solve streak x3');
+    await recordAttempt(store, user, solve({ success: false }), never);
+    expect(label(await recordAttempt(store, user, solve(), never))).toBeUndefined();
+  });
+  it('pays a challenge bonus for puzzles rated above you', async () => {
+    const { store, user } = await setup(1000);
+    const r = await recordAttempt(store, user, solve({ drillId: 'lucena', mateIn: null }), never);
+    expect(r.breakdown.some((b) => b.label.startsWith('Challenge'))).toBe(true);
+  });
+  it('grows the full-bulb bonus with the daily streak', async () => {
+    const { store, user } = await setup(800);
+    for (const day of ['2026-11-16', '2026-11-17', '2026-11-18']) {
+      await store.run('INSERT INTO days (user_id, day, cloves, bulb_done, bonus) VALUES (?,?,5,1,50)', user.id, day);
+    }
+    let r;
+    for (let i = 0; i < 5; i++) r = await recordAttempt(store, user, solve(), never);
+    expect(r.day.bulbCompletedNow).toBe(true);
+    expect(r.day.bulbBonus).toBe(80); // 50 + 10 x 3-day streak
+  });
+});
+
 describe('auth + validation', () => {
   it('verifies PBKDF2 hashes', async () => {
     const h = await hashPassword('garlick!');

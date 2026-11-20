@@ -3,7 +3,8 @@
 // Works against any store with the async get/all/run/batch interface
 // (local SQLite or Cloudflare D1).
 import { DRILLS, DRILL_BY_ID, MAX_LEVEL, parSeconds } from '../shared/drills.js';
-import { scoreAttempt, qualifiesForLevel, SOLVES_TO_LEVEL, BULB_CLOVES, BULB_BONUS, PB_BONUS_SHARE, rankFor, masteryStars, addDays } from '../shared/scoring.js';
+import { scoreAttempt, qualifiesForLevel, SOLVES_TO_LEVEL, BULB_CLOVES, PB_BONUS_SHARE, masteryStars, addDays } from '../shared/scoring.js';
+import { pathFor, pathChange, challengeBonus, comboBonus, bulbBonusFor } from '../shared/path.js';
 import { cloveValue, cloveShortfall, startingLevel, drillFit, LESSON_CLOVES_PER_DAY } from '../shared/cloves.js';
 import { streakInfo, shieldDaysToUse, weaveBraid, rollGolden, goldenBonus, BRAID_SIZE, MAX_SHIELDS, REPAIR_CLOVES } from '../shared/streak.js';
 import { puzzleRating, solveScore, rateAttempt, startingEndgameRating } from '../shared/rating.js';
@@ -116,7 +117,7 @@ export async function getTotals(store, userId, today) {
     solvesByDrill,
     levelByDrill,
     drillCount: DRILLS.length,
-    rank: rankFor(points),
+    path: pathFor(points),
   };
 }
 
@@ -211,7 +212,7 @@ export async function recordAttempt(store, user, body, opts = {}) {
   await applyShields(store, user.id, day);
   // Everything this attempt needs to read, fetched in parallel (each read is a
   // network round trip on D1).
-  const [progressRow0, pbPrev, progressBefore, dayRow0, urow0, alreadyRows] = await Promise.all([
+  const [progressRow0, pbPrev, progressBefore, dayRow0, urow0, alreadyRows, recentRows, sdBefore] = await Promise.all([
     store.get(
       'SELECT level, qualifying, clean_streak, status, review_due, review_step FROM progress WHERE user_id = ? AND drill_id = ?',
       user.id,
@@ -226,6 +227,8 @@ export async function recordAttempt(store, user, body, opts = {}) {
     store.get('SELECT cloves, bulb_done, bonus FROM days WHERE user_id = ? AND day = ?', user.id, day),
     store.get('SELECT shields, braid, golden_since FROM users WHERE id = ?', user.id),
     store.all('SELECT achievement_id FROM achievements WHERE user_id = ?', user.id),
+    store.all('SELECT success FROM attempts WHERE user_id = ? AND lesson_replay = 0 ORDER BY id DESC LIMIT 10', user.id),
+    streakDays(store, user.id),
   ]);
   const progressRow = progressRow0 ?? { level: 1, qualifying: 0, clean_streak: 0, status: null, review_due: null, review_step: 0 };
   const level = int(body.level, 1, Math.min(MAX_LEVEL, progressRow.level));
@@ -268,6 +271,27 @@ export async function recordAttempt(store, user, body, opts = {}) {
       const bonus = Math.round(score.base * PB_BONUS_SHARE);
       breakdown.push({ label: 'New personal best pace', points: bonus });
       points += bonus;
+    }
+  }
+
+  // Path bonuses (shared/path.js): harder-than-you puzzles and solves in a row.
+  // Lesson replays don't earn them: the answer was just shown.
+  let solvesInARow = 0;
+  if (success && !attempt.lessonReplay) {
+    solvesInARow = 1;
+    for (const r of recentRows) {
+      if (!r.success) break;
+      solvesInARow++;
+    }
+    const challenge = challengeBonus(score.base, puzzleRating(drill, level), user.eg_rating);
+    if (challenge > 0) {
+      breakdown.push({ label: `Challenge (puzzle ${puzzleRating(drill, level)} vs your ${Math.round(user.eg_rating)})`, points: challenge });
+      points += challenge;
+    }
+    const combo = comboBonus(score.base, solvesInARow);
+    if (combo > 0) {
+      breakdown.push({ label: `🔥 Solve streak x${solvesInARow}`, points: combo });
+      points += combo;
     }
   }
 
@@ -327,6 +351,9 @@ export async function recordAttempt(store, user, body, opts = {}) {
   const dayRow = dayRow0 ?? { cloves: 0, bulb_done: 0, bonus: 0 };
   const cloves = dayRow.cloves + cloveGain;
   const bulbCompletedNow = !dayRow.bulb_done && cloves >= BULB_CLOVES - EPS;
+  // The full-bulb bonus grows with the daily streak you bring into today.
+  const streakBefore = streakInfo({ ...sdBefore, doneDays: sdBefore.doneDays.filter((d) => d !== day), today: day, shields: urow0?.shields ?? 0 }).streak;
+  const bulbBonus = bulbBonusFor(streakBefore);
 
   // Streak protection: cloves beyond the full bulb weave the braid (a shield
   // every BRAID_SIZE), and a double bulb repairs a streak broken yesterday.
@@ -410,7 +437,7 @@ export async function recordAttempt(store, user, body, opts = {}) {
     writes.push([
       `INSERT INTO days (user_id, day, cloves, bulb_done, bonus) VALUES (?,?,?,?,?)
        ON CONFLICT(user_id, day) DO UPDATE SET cloves = excluded.cloves, bulb_done = excluded.bulb_done, bonus = excluded.bonus`,
-      [user.id, day, cloves, dayRow.bulb_done || bulbCompletedNow ? 1 : 0, bulbCompletedNow ? BULB_BONUS : dayRow.bonus],
+      [user.id, day, cloves, dayRow.bulb_done || bulbCompletedNow ? 1 : 0, bulbCompletedNow ? bulbBonus : dayRow.bonus],
     ]);
   }
   await store.batch(writes);
@@ -451,9 +478,10 @@ export async function recordAttempt(store, user, body, opts = {}) {
       events: school.events,
     },
     progress: { level: newLevel, qualifying, levelUp, needed: SOLVES_TO_LEVEL, qualified: qualifies },
-    day: { ...dayAfter, bulbCompletedNow, bulbBonus: bulbCompletedNow ? BULB_BONUS : 0 },
+    day: { ...dayAfter, bulbCompletedNow, bulbBonus: bulbCompletedNow ? bulbBonus : 0, streakBefore },
+    path: pathChange(totals.points - points - (bulbCompletedNow ? bulbBonus : 0), totals.points),
     newAchievements: unlocked.map((id) => publicAchievement(ACHIEVEMENTS.find((a) => a.id === id))),
-    totals: { points: totals.points, rank: totals.rank, streak: totals.streak, shields: totals.shields },
+    totals: { points: totals.points, path: totals.path, streak: totals.streak, shields: totals.shields },
   };
 }
 
@@ -543,7 +571,7 @@ export async function getLeaderboard(store, today) {
       streak: t.streak,
       bulbs: t.bulbs,
       todayCloves: d.cloves,
-      rank: t.rank.name,
+      path: { label: t.path.label, icon: t.path.worldInfo.icon, world: t.path.worldInfo.name },
     });
   }
   // Family records: fastest pace (seconds per move) on each drill.

@@ -41,8 +41,12 @@ solve.
 * **Lessons** (Learn tab, or "Show me how" after a failed puzzle) walk through
   the perfect moves from the puzzle's own position, one explained step at a
   time. Replaying the puzzle afterwards earns a full clove (twice a day).
-* **Points** for solving, efficiency and speed against par, with penalties for
-  hints and takebacks. Ranks run from Sprout to Garlick Grandmaster.
+* **Points** for solving (harder drills and levels pay more), efficiency,
+  speed, puzzles above your rating, solve streaks and daily streaks, with
+  penalties for hints and takebacks. Points move you along **the Garlick
+  Path**: stages 1-1, 1-2 ... in seven themed worlds (Garlic Patch, Pawn
+  Village, Rook Towers, Bishop's Cathedral, Knight's Forest, Queen's Palace,
+  Grandmaster Summit), separate from the endgame rating.
 * **Daily Garlick bulb:** solves colour in cloves. A drill at your level
   fills a whole clove; easy drills fill half and warm-ups a quarter, with more
   at higher levels. Five cloves complete the bulb (+50 points): the stalks shoot
@@ -53,7 +57,7 @@ solve.
   yesterday.
 * **Golden cloves:** about 1 in 8 solves at your level turns golden for bonus
   points.
-* **30 badges**, a **family leaderboard** (weekly and all-time), **family
+* **33 badges**, a **family leaderboard** (weekly and all-time), **family
   records** (fastest pace per drill), and **stats** with pace trends and a
   30-day calendar.
 * **Family accounts** with username, password and chess rating (chess.com,

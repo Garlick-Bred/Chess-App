@@ -36,10 +36,10 @@ export default function Header({ route }: { route: Route }) {
         <div className="mini-bulb" title={`${me.today.cloves}/5 cloves today`}>
           <GarlickBulb filled={me.today.cloves} size={26} celebrate={false} />
         </div>
-        <div className="points-pill" title="Total points">
-          {me.totals.points.toLocaleString()}
-          <small>pts</small>
-        </div>
+        <a className="points-pill" href="#/path" title={`${me.totals.points.toLocaleString()} points · ${me.totals.path.worldInfo.name}, stage ${me.totals.path.label}`}>
+          <span className="pill-icon">{me.totals.path.worldInfo.icon}</span> {me.totals.path.label}
+          <small>{me.totals.points.toLocaleString()} pts</small>
+        </a>
         <button className="avatar-btn" style={{ background: me.user.color }} onClick={() => setMenu((m) => !m)} aria-label="Account menu">
           {me.user.avatar}
         </button>
@@ -48,7 +48,7 @@ export default function Header({ route }: { route: Route }) {
             <div className="menu-head">
               <b>{me.user.displayName}</b>
               <small>
-                @{me.user.username} · {me.totals.rank.name}
+                @{me.user.username} · {me.totals.path.worldInfo.icon} {me.totals.path.label} {me.totals.path.worldInfo.name}
                 {me.user.rating ? ` · ${me.user.rating}` : ''}
               </small>
             </div>

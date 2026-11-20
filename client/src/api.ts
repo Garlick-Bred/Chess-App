@@ -61,12 +61,31 @@ export interface Config {
   ratingSources: Record<string, string>;
 }
 
-export interface Rank {
+/** A world on the Garlick Path (shared/path.js). */
+export interface WorldInfo {
+  number: number;
   name: string;
+  icon: string;
+  tagline: string;
+  bg: [string, string];
+  accent: string;
+  deco: string[];
+}
+
+/** Where a points total puts you on the Garlick Path. */
+export interface PathInfo {
   index: number;
-  next: string | null;
-  progress: number;
+  label: string;
+  world: number;
+  stage: number;
+  worldInfo: WorldInfo;
+  start: number;
+  cost: number;
+  into: number;
   toNext: number;
+  progress: number;
+  nextLabel: string;
+  nextIsNewWorld: boolean;
 }
 
 export interface Totals {
@@ -85,7 +104,7 @@ export interface Totals {
   /** The latest day (in the last few) a shield covered, if any. */
   shieldUsedOn: string | null;
   golden: number;
-  rank: Rank;
+  path: PathInfo;
   solvesByDrill: Record<string, number>;
   levelByDrill: Record<string, number>;
 }
@@ -149,7 +168,8 @@ export interface AttemptResult {
     events: { graduated?: boolean; reviewPassed?: boolean; recheck?: boolean; demoted?: boolean };
   };
   progress: { level: number; qualifying: number; levelUp: boolean; needed: number; qualified: boolean };
-  day: DayInfo & { bulbCompletedNow: boolean; bulbBonus: number };
+  day: DayInfo & { bulbCompletedNow: boolean; bulbBonus: number; streakBefore?: number };
   newAchievements: { id: string; name: string; icon: string; desc: string }[];
-  totals: { points: number; rank: Rank; streak: number; shields: number };
+  totals: { points: number; path: PathInfo; streak: number; shields: number };
+  path: { before: PathInfo; after: PathInfo; stagesGained: number; newWorld: boolean };
 }

@@ -69,6 +69,10 @@ export default function DayDonePage() {
           </p>
         )}
 
+        <p className="small">
+          {me.totals.path.worldInfo.icon} <b>Stage {me.totals.path.label}</b> on the Garlick Path ·{' '}
+          {me.totals.path.toNext.toLocaleString()} points to {me.totals.path.nextIsNewWorld ? `World ${me.totals.path.world + 1}` : me.totals.path.nextLabel}
+        </p>
         <div className="tiles day-tiles">
           <div className="card tile">
             <div className="tile-value">{rows ? solved.length : '…'}</div>

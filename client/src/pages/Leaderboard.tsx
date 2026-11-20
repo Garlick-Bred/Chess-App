@@ -17,7 +17,7 @@ interface Board {
     streak: number;
     bulbs: number;
     todayCloves: number;
-    rank: string;
+    path: { label: string; icon: string; world: string };
     rating: number | null;
     ratingSource: string | null;
     egRating: number | null;
@@ -62,7 +62,10 @@ export default function LeaderboardPage() {
               <small className="muted">
                 {' '}
                 · {tab === 'rating' ? (p.rating ? `chess ${p.rating} · ` : '') : p.egRating ? `endgame ${p.egRating} · ` : ''}
-                {p.rank} · {p.solves} solve{p.solves === 1 ? '' : 's'}
+                <span title={p.path.world}>
+                  {p.path.icon} {p.path.label}
+                </span>{' '}
+                · {p.solves} solve{p.solves === 1 ? '' : 's'}
               </small>
             </span>
             <span title={`${p.todayCloves}/5 cloves today`}>

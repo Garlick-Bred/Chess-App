@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { scoreAttempt, qualifiesForLevel, bulbStreak, rankFor, masteryStars, addDays } from '../shared/scoring.js';
+import { scoreAttempt, qualifiesForLevel, bulbStreak, masteryStars, addDays } from '../shared/scoring.js';
 import { getDrill, parSeconds, moveCap } from '../shared/drills.js';
 
 const kqk = getDrill('kqk');
@@ -34,7 +34,7 @@ describe('scoreAttempt', () => {
   });
 });
 
-describe('levels and ranks', () => {
+describe('levels and mastery', () => {
   it('needs efficiency and (at speed levels) par to qualify', () => {
     const a = { success: true, takebacks: 0, efficiency: 0.8, durationMs: 20000, parSeconds: 15 };
     expect(qualifiesForLevel(a, 2)).toBe(true);
@@ -48,11 +48,7 @@ describe('levels and ranks', () => {
     expect(masteryStars({ solves: 9, level: 3 })).toBe(3);
     expect(masteryStars({ solves: 20, level: 5, qualifying: 3 })).toBe(5);
   });
-  it('ranks by points', () => {
-    expect(rankFor(0).name).toBe('Sprout');
-    expect(rankFor(800).name).toBe('Clove');
-    expect(rankFor(25000).next).toBe(null);
-  });
+
 });
 
 describe('bulb streak', () => {

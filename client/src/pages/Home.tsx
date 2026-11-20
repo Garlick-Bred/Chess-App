@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { DRILLS, DRILL_BY_ID } from '@shared/drills.js';
-import { BULB_BONUS } from '@shared/scoring.js';
+import { bulbBonusFor } from '@shared/path.js';
+import { PathCard } from './Path';
 import insights from '@shared/insights.json';
 import { drillFit, formatCloves } from '@shared/cloves.js';
 import { api, localDay, type Me } from '../api';
@@ -93,7 +94,6 @@ export default function HomePage() {
   const recs = recommendations(me.progress, me.user.settings.chesscom, myRating(me));
   const player = me.user.settings.chesscom ? (insights as any).players?.[me.user.settings.chesscom.toLowerCase()] : null;
   const left = Math.max(0, 5 - me.today.cloves);
-  const r = me.totals.rank;
   const doneToday = isDoneToday(me.user.username);
 
   return (
@@ -125,7 +125,7 @@ export default function HomePage() {
             </p>
           ) : (
           <p className="muted">
-            Solves fill cloves: a drill at your level fills a whole clove, warm-ups only part of one. Fill all five for <b>+{BULB_BONUS}</b> bonus
+            Solves fill cloves: a drill at your level fills a whole clove, warm-ups only part of one. Fill all five for <b>+{bulbBonusFor(me.totals.streak)}</b> bonus
             points
             {me.totals.streak > 0 ? (
               <>
@@ -172,33 +172,10 @@ export default function HomePage() {
       <StreakNotice me={me} />
 
 
-      <SchoolSummary me={me} />
+      <PathCard me={me} />
 
-      <section className="rank card">
-        <div className="row between">
-          <div>
-            <div className="eyebrow">Rank</div>
-            <div className="rank-name">{r.name}</div>
-          </div>
-          <div className="right">
-            <div className="rank-points">{me.totals.points.toLocaleString()} pts</div>
-            {r.next && (
-              <div className="small muted">
-                {r.toNext.toLocaleString()} to {r.next}
-              </div>
-            )}
-          </div>
-        </div>
-        <div className="bar">
-          <div style={{ width: `${Math.round(r.progress * 100)}%` }} />
-        </div>
-        <div className="row gap small muted wrap">
-          <span>{plural(me.totals.solves, 'solve')}</span>
-          <span>{me.totals.perfects} perfect</span>
-          <span>{plural(me.totals.bulbs, 'full bulb')}</span>
-          <span>endgame rating {myRating(me)}</span>
-        </div>
-      </section>
+
+      <SchoolSummary me={me} />
 
       {player?.headline && (
         <section className="card insight">

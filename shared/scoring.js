@@ -1,9 +1,11 @@
-// Points, levels, ranks and the daily Garlick bulb. Pure functions so the
+// Points, levels and the daily Garlick bulb (the path that points move you
+// along is in path.js). Pure functions so the
 // server can recompute everything the client shows.
 import { efficiency } from './grading.js';
 import { MAX_LEVEL } from './drills.js';
 
 export const BULB_CLOVES = 5;
+/** Base full-bulb bonus; it grows with the daily streak (path.js bulbBonusFor). */
 export const BULB_BONUS = 50;
 export const PB_BONUS_SHARE = 0.1;
 
@@ -87,29 +89,6 @@ export function masteryStars(p) {
   if (p.level >= 4) s = 4;
   if (p.level >= 5 && p.qualifying >= SOLVES_TO_LEVEL) s = 5;
   return s;
-}
-
-export const RANKS = [
-  { min: 0, name: 'Sprout' },
-  { min: 250, name: 'Seedling' },
-  { min: 750, name: 'Clove' },
-  { min: 2000, name: 'Bulb' },
-  { min: 5000, name: 'Braid' },
-  { min: 10000, name: 'Garlick Knight' },
-  { min: 20000, name: 'Garlick Grandmaster' },
-];
-
-export function rankFor(points) {
-  let idx = 0;
-  for (let i = 0; i < RANKS.length; i++) if (points >= RANKS[i].min) idx = i;
-  const next = RANKS[idx + 1];
-  return {
-    name: RANKS[idx].name,
-    index: idx,
-    next: next ? next.name : null,
-    progress: next ? (points - RANKS[idx].min) / (next.min - RANKS[idx].min) : 1,
-    toNext: next ? next.min - points : 0,
-  };
 }
 
 /** Consecutive days (ending today or yesterday) with a completed bulb. */

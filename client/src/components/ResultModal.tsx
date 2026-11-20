@@ -3,6 +3,7 @@ import type { AttemptResult } from '../api';
 import { sfx } from '../sound';
 import GarlickBulb from './GarlickBulb';
 import GoldenClove from './GoldenClove';
+import { worldStyle } from '../pages/Path';
 import { fmtTime, AchIcon } from './ui';
 import { formatCloves } from '@shared/cloves.js';
 
@@ -10,6 +11,50 @@ function niceDay(day: string | null): string {
   if (!day) return '';
   const [y, m, d] = day.split('-').map(Number);
   return new Date(y, m - 1, d).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
+}
+
+/** Progress along the Garlick Path, with a stage-up or new-world celebration. */
+function PathProgress({ change }: { change: AttemptResult['path'] }) {
+  const { before, after, stagesGained, newWorld } = change;
+  const [width, setWidth] = useState(stagesGained > 0 ? 0 : before.progress);
+  useEffect(() => {
+    const t = setTimeout(() => setWidth(after.progress), 700);
+    const u = stagesGained > 0 ? setTimeout(() => (newWorld ? sfx.bulb() : sfx.stageUp()), 1700) : undefined;
+    return () => {
+      clearTimeout(t);
+      if (u) clearTimeout(u);
+    };
+  }, [after.progress, stagesGained, newWorld]);
+  return (
+    <div className="path-progress">
+      {newWorld ? (
+        <div className="world-up" style={worldStyle(after.worldInfo)}>
+          <span className="world-up-icon">{after.worldInfo.icon}</span>
+          <div>
+            <b>
+              World {after.world}: {after.worldInfo.name}
+            </b>
+            <small>{after.worldInfo.tagline}</small>
+          </div>
+        </div>
+      ) : stagesGained > 0 ? (
+        <div className="stage-up">
+          ⬆️ <b>Stage {after.label}</b> reached!
+        </div>
+      ) : null}
+      <div className="path-row">
+        <a className="path-chip" href="#/path" style={{ background: after.worldInfo.bg[0] }}>
+          {after.worldInfo.icon} {after.label}
+        </a>
+        <span className="bar path-bar" style={{ ['--world-accent' as any]: after.worldInfo.accent }}>
+          <div style={{ width: `${Math.round(width * 100)}%` }} />
+        </span>
+        <small className="muted">
+          {after.toNext.toLocaleString()} to {after.nextIsNewWorld ? `World ${after.world + 1}` : after.nextLabel}
+        </small>
+      </div>
+    </div>
+  );
 }
 
 /** Garlic braid progress once the bulb is full, a new shield, or a repaired streak. */
@@ -237,6 +282,7 @@ export default function ResultModal({ drill, level, outcome, result, submitError
             </ul>
           </div>
         )}
+        {result?.path && ok && <PathProgress change={result.path} />}
         {!result && !submitError && <div className="muted small center">Saving…</div>}
         {submitError && <div className="form-error">{submitError}</div>}
 
