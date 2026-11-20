@@ -189,8 +189,10 @@ to explain.
 * **📖 Lessons** (the Learn tab, or "Show me how" after a failed puzzle) start
   from the same position and step through perfect play move by move, with an
   arrow for the next move, the king's box shaded, and one sentence per move.
-  The defender plays the longest resistance. At the end, "Play it yourself"
-  replays the puzzle for a clove.
+  The defender plays the longest resistance. "↩ Back to the puzzle" above the
+  board leaves the lesson at any point; at the end, "Play it yourself" does
+  the same. Either way the replay is worth a clove, and the replay has a
+  "Watch the lesson again" link.
 
 ## 8. Variety from a fixed bank
 

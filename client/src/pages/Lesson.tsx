@@ -99,6 +99,16 @@ function Lesson({ drill, startFen, mateIn, level, fromPuzzle }: { drill: any; st
   const arrows = L.upcoming ? [{ from: L.upcoming.from, to: L.upcoming.to, color: L.upcoming.by === 'you' ? '#5fae3b' : '#8f8a83' }] : [];
 
   return (
+    <div className="lesson-page">
+      {/* Always-visible way out: back to the puzzle (or try the position) at any point. */}
+      <div className="lesson-bar">
+        <span className="lesson-bar-title">
+          📖 Lesson<span className="lesson-bar-name"> · {drill.name}</span>
+        </span>
+        <button className="btn back-btn" onClick={replay} title="Play this position yourself. Solving it earns a full clove.">
+          {fromPuzzle ? '↩ Back to the puzzle' : 'Try it yourself ▸'}
+        </button>
+      </div>
     <div className="play lesson">
       <div className="board-col">
         <div className="board-wrap">
@@ -223,6 +233,7 @@ function Lesson({ drill, startFen, mateIn, level, fromPuzzle }: { drill: any; st
           ◂ All lessons
         </a>
       </aside>
+    </div>
     </div>
   );
 }

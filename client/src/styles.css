@@ -2172,3 +2172,37 @@ button.card:hover {
     display: none;
   }
 }
+
+/* ---------- lesson: way back to the puzzle ---------- */
+.lesson-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+.lesson-bar-title {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 800;
+  color: var(--muted);
+}
+.btn.back-btn {
+  flex: none;
+  background: #3d6fb6;
+  border-bottom-color: #274a7c;
+  color: #fff;
+  padding: 9px 16px;
+}
+.btn.lesson-again {
+  align-self: flex-start;
+  padding: 4px 0;
+  color: #8fb4ea;
+}
+@media (max-width: 360px) {
+  .lesson-bar-name {
+    display: none;
+  }
+}

@@ -243,6 +243,11 @@ function Session({
               <b>{userSide}</b> to move - {goalText}
             </span>
           </div>
+          {view.lessonReplay && (
+            <button className="btn ghost lesson-again" onClick={openLesson}>
+              📖 Watch the lesson again
+            </button>
+          )}
         </div>
 
         <div className="clock-row">
