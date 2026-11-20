@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { DRILLS, getDrill, MAX_LEVEL } from '@shared/drills.js';
 import { useApp, go } from '../App';
 import { useDrill } from '../game/useDrill';
@@ -6,8 +6,11 @@ import Board from '../components/Board';
 import ResultModal from '../components/ResultModal';
 import { Material, TierChip, fmtClock, CloveChip } from '../components/ui';
 import { drillFit } from '@shared/cloves.js';
+import { pickSchoolDrill } from '@shared/curriculum.js';
+import { curriculumFor, myRating } from '../school';
 
-const FIT_WEIGHT: Record<string, number> = { core: 1, easy: 0.6, warmup: 0.25 };
+// Stretch drills (far above you) still come up in random mode, just less often.
+const FIT_WEIGHT: Record<string, number> = { stretch: 0.3, core: 1, easy: 0.6, warmup: 0.25 };
 
 /** Random mode: favour drills at your level that you have not mastered. */
 function pickRandomDrill(progress: Record<string, { stars: number }>, rating: number | null, exclude?: string): string {
@@ -29,13 +32,21 @@ export default function PlayPage({ drillId, query }: { drillId: string; query: U
   const mateParam = query.get('mate');
   const { me } = useApp();
   const random = drillId === 'random';
+  const school = drillId === 'school';
   const [round, setRound] = useState(0);
-  const actualId = useMemo(
-    () => (random ? pickRandomDrill(me.progress, me.user.rating) : drillId),
-    // a new random drill each round
+  // Drills played this School session, so the rotation can cycle through them.
+  const recent = useRef<string[]>([]);
+  const { actualId, mode } = useMemo(() => {
+    if (school) {
+      const pick = pickSchoolDrill(curriculumFor(me), { reviewsToday: me.today.reviews ?? 0, recent: recent.current });
+      const id = pick?.drillId ?? pickRandomDrill(me.progress, myRating(me));
+      recent.current = [...recent.current, id];
+      return { actualId: id, mode: pick?.mode ?? null };
+    }
+    return { actualId: random ? pickRandomDrill(me.progress, myRating(me)) : drillId, mode: null };
+    // a new drill each round
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [drillId, round],
-  );
+  }, [drillId, round]);
   if (!DRILLS.some((d: any) => d.id === actualId)) {
     return (
       <div className="page">
@@ -59,6 +70,7 @@ export default function PlayPage({ drillId, query }: { drillId: string; query: U
       drillId={actualId}
       level={requested}
       random={random}
+      mode={mode}
       fixed={fixed}
       lessonReplay={lessonReplay && round === 0}
       onNext={() => setRound((r) => r + 1)}
@@ -87,6 +99,7 @@ function Session({
   drillId,
   level,
   random,
+  mode,
   fixed,
   lessonReplay,
   onNext,
@@ -94,6 +107,7 @@ function Session({
   drillId: string;
   level: number;
   random: boolean;
+  mode: 'school' | 'review' | null;
   fixed: { fen: string; mateIn: number | null } | null;
   lessonReplay: boolean;
   onNext: () => void;
@@ -106,7 +120,15 @@ function Session({
     playAs: me.user.settings.playAs,
     fixed,
     lessonReplay,
+    mode: lessonReplay ? null : mode,
   });
+  // Is this drill at your level (in your School rotation or a due check-up)?
+  const atLevel = useMemo(() => {
+    const cur = curriculumFor(me);
+    return cur.active.some((i: any) => i.id === drillId) || cur.due.some((i: any) => i.id === drillId);
+    // judged at the start of the puzzle
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [drillId]);
   const openLesson = () => {
     if (!view) return;
     const q = new URLSearchParams({ fen: view.startFen, level: String(level) });
@@ -226,7 +248,7 @@ function Session({
           <div className="row between">
             <div>
               <div className="eyebrow">
-                {view.lessonReplay ? '📖 Lesson replay · ' : random ? '🎲 Random · ' : ''}
+                {view.lessonReplay ? '📖 Lesson replay · ' : mode === 'review' ? '🩺 School check-up · ' : mode === 'school' ? '🎓 School · ' : random ? '🎲 Random · ' : ''}
                 <TierChip tier={drill.tier} /> Level {level}
                 {level >= 4 ? ' · speed' : ''}
               </div>
@@ -235,7 +257,7 @@ function Session({
             <Material drillId={drill.id} size={20} />
           </div>
           <div style={{ marginTop: 6 }}>
-            <CloveChip drill={drill} level={level} rating={me.user.rating} lessonReplay={view.lessonReplay} />
+            <CloveChip drill={drill} level={level} rating={myRating(me)} lessonReplay={view.lessonReplay} atLevel={atLevel} />
           </div>
           <div className="goal">
             <span className={`side-dot ${view.userColor}`} />

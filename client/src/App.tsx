@@ -14,6 +14,7 @@ import SettingsPage from './pages/Settings';
 import LearnPage from './pages/Learn';
 import LessonPage from './pages/Lesson';
 import DayDonePage from './pages/DayDone';
+import SchoolPage from './pages/School';
 
 interface AppCtx {
   me: Me;
@@ -173,6 +174,9 @@ export default function App() {
       break;
     case 'done':
       page = <DayDonePage />;
+      break;
+    case 'school':
+      page = <SchoolPage />;
       break;
     case 'stats':
       page = <StatsPage />;

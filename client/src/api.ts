@@ -49,6 +49,9 @@ export interface User {
   color: string;
   rating: number | null;
   ratingSource: string | null;
+  /** Endgame rating (Elo-style, same scale as a chess rating). */
+  egRating: number | null;
+  egGames: number;
   settings: Settings;
 }
 
@@ -83,6 +86,8 @@ export interface DayInfo {
   bulbDone: boolean;
   bonus: number;
   size: number;
+  /** Endgame School check-ups played today. */
+  reviews: number;
 }
 
 export interface DrillProgress {
@@ -93,6 +98,11 @@ export interface DrillProgress {
   bestSecondsPerMove: number | null;
   bestMs: number | null;
   stars: number;
+  /** Endgame School: clean solves in a row, and graduation/check-up state. */
+  cleanStreak: number;
+  status: 'learning' | 'graduated';
+  reviewDue: string | null;
+  reviewStep: number;
 }
 
 export interface Me {
@@ -113,6 +123,18 @@ export interface AttemptResult {
   cloveGain: number;
   lessonReplay?: boolean;
   lessonCloveCapped?: boolean;
+  /** Why the solve filled less than a whole clove, if it did. */
+  cloveNote?: string | null;
+  rating: { rated: boolean; before: number; after: number; delta: number; puzzle: number };
+  school: {
+    atLevel: boolean;
+    mode: 'school' | 'review' | null;
+    cleanStreak: number;
+    needed: number;
+    status: 'learning' | 'graduated';
+    reviewDue: string | null;
+    events: { graduated?: boolean; reviewPassed?: boolean; recheck?: boolean; demoted?: boolean };
+  };
   progress: { level: number; qualifying: number; levelUp: boolean; needed: number; qualified: boolean };
   day: DayInfo & { bulbCompletedNow: boolean; bulbBonus: number };
   newAchievements: { id: string; name: string; icon: string; desc: string }[];

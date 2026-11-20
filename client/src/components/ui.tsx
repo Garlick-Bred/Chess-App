@@ -4,12 +4,25 @@ import { PIECE_IMG } from './Board';
 import GarlickBulb from './GarlickBulb';
 import { cloveValue, drillFit, formatCloves } from '@shared/cloves.js';
 
-const FIT_LABEL: Record<string, string> = { warmup: 'Warm-up', easy: 'Easy for you', core: 'Your level' };
+const FIT_LABEL: Record<string, string> = { warmup: 'Warm-up', easy: 'Easy for you', core: 'Your level', stretch: 'Stretch' };
 
 /** What a solve of this drill is worth to this player, e.g. "Warm-up · ¼ clove". */
-export function CloveChip({ drill, level, rating, lessonReplay = false }: { drill: any; level: number; rating: number | null; lessonReplay?: boolean }) {
-  const fit = drillFit(drill, rating);
-  const v = cloveValue({ drill, level, rating });
+export function CloveChip({
+  drill,
+  level,
+  rating,
+  lessonReplay = false,
+  atLevel = false,
+}: {
+  drill: any;
+  level: number;
+  rating: number | null;
+  lessonReplay?: boolean;
+  /** In your Endgame School rotation: always "your level", a whole clove. */
+  atLevel?: boolean;
+}) {
+  const fit = atLevel ? 'core' : drillFit(drill, rating);
+  const v = cloveValue({ drill, level, rating, atLevel });
   if (lessonReplay) {
     return (
       <span className="clove-chip fit-core" title="Solving a puzzle after its lesson earns a full clove (twice a day)">

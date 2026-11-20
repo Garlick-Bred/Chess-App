@@ -7,6 +7,8 @@ import { api, localDay } from '../api';
 import { go, isDoneToday, useApp } from '../App';
 import GarlickBulb from '../components/GarlickBulb';
 import { Material, Stars, TierChip, LevelDots, fmtTime } from '../components/ui';
+import { SchoolSummary } from './School';
+import { myRating } from '../school';
 
 export const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`;
 
@@ -28,7 +30,8 @@ function recommendations(progress: Record<string, any>, chesscom: string | undef
   const player = chesscom ? (insights as any).players?.[chesscom.toLowerCase()] : null;
   for (const r of player?.recommended ?? []) add({ drillId: r.drillId, why: `From your chess.com games: ${r.reason}` });
   // Skip warm-ups: drills far below the player's rating aren't the next step.
-  const atLevel = DRILLS.filter((d: any) => drillFit(d, rating) !== 'warmup');
+  // Skip stretch goals too: Endgame School brings those in when you're ready.
+  const atLevel = DRILLS.filter((d: any) => !['warmup', 'stretch'].includes(drillFit(d, rating)));
   const next = atLevel.find((d: any) => (progress[d.id]?.stars ?? 0) < 3);
   if (next) add({ drillId: next.id, why: progress[next.id]?.solves ? 'Your next step on the path - get it to level 3.' : 'Next fundamental to learn.' });
   const weak = atLevel.filter((d: any) => (progress[d.id]?.attempts ?? 0) >= 3)
@@ -49,7 +52,7 @@ export default function HomePage() {
       .then((s) => setRecent(s.recent.slice(0, 6)))
       .catch(() => undefined);
   }, []);
-  const recs = recommendations(me.progress, me.user.settings.chesscom, me.user.rating);
+  const recs = recommendations(me.progress, me.user.settings.chesscom, myRating(me));
   const player = me.user.settings.chesscom ? (insights as any).players?.[me.user.settings.chesscom.toLowerCase()] : null;
   const left = Math.max(0, 5 - me.today.cloves);
   const r = me.totals.rank;
@@ -107,7 +110,10 @@ export default function HomePage() {
               </>
             ) : (
               <>
-                <button className="btn primary big" onClick={() => go('/play/random')}>
+                <button className="btn primary big" onClick={() => go('/play/school')}>
+                  🎓 Endgame School
+                </button>
+                <button className="btn big" onClick={() => go('/play/random')}>
                   🎲 Random drill
                 </button>
                 <button className="btn big" onClick={() => go('/drills')}>
@@ -124,6 +130,8 @@ export default function HomePage() {
           </div>
         </div>
       </section>
+
+      <SchoolSummary me={me} />
 
       <section className="rank card">
         <div className="row between">
@@ -147,6 +155,7 @@ export default function HomePage() {
           <span>{plural(me.totals.solves, 'solve')}</span>
           <span>{me.totals.perfects} perfect</span>
           <span>{plural(me.totals.bulbs, 'full bulb')}</span>
+          <span>endgame rating {myRating(me)}</span>
         </div>
       </section>
 

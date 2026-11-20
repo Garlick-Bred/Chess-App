@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { createNodeStore } from '../server/store-node.js';
 import { ensureSchema } from '../server/schema.js';
-import { recordAttempt, getTotals, getProgress, getLeaderboard, applyStartingLevels } from '../server/game.js';
+import { recordAttempt, getTotals, getProgress, getLeaderboard, applyStartingLevels, ensureEndgameRating } from '../server/game.js';
 import { hashPassword, verifyPassword } from '../server/auth.js';
 import { validFen } from '../server/tablebase.js';
 import { createApi } from '../server/api.js';
@@ -102,6 +102,74 @@ describe('attempts', () => {
     expect(lb.players[0].weekPoints).toBeGreaterThan(0);
     expect(lb.players[0].rating).toBe(800);
     expect(lb.records.krk.secondsPerMove).toBeCloseTo(2.5);
+  });
+});
+
+describe('endgame rating and Endgame School', () => {
+  const krk = (over = {}) => solve({ drillId: 'krk', level: 2, mateIn: 8, ...over });
+  it('starts at your chess rating, rises on solves and falls on failures', async () => {
+    const { store, user } = await setup(1200);
+    const a = await recordAttempt(store, user, solve({ drillId: 'lucena', userMoves: 6, mateIn: null }));
+    expect(a.rating.before).toBe(1200);
+    expect(a.rating.delta).toBeGreaterThan(0);
+    const b = await recordAttempt(store, user, solve({ drillId: 'lucena', success: false, userMoves: 3, mateIn: null }));
+    expect(b.rating.delta).toBeLessThan(0);
+    const row = await store.get('SELECT eg_rating, eg_games FROM users WHERE id = ?', user.id);
+    expect(Math.round(row.eg_rating)).toBe(b.rating.after);
+    expect(row.eg_games).toBe(2);
+  });
+  it('lesson replays are unrated', async () => {
+    const { store, user } = await setup(1200);
+    const r = await recordAttempt(store, user, solve({ drillId: 'philidor', lessonReplay: true, mateIn: null }));
+    expect(r.rating.rated).toBe(false);
+    expect(r.rating.delta).toBe(0);
+  });
+  it('a drill you are struggling with fills a whole clove even if it is easy for your rating', async () => {
+    const { store, user } = await setup(1200);
+    // Rook mate (target 800) is "easy" at 1200: half a clove when you have it under control...
+    expect((await recordAttempt(store, user, krk())).cloveGain).toBe(0.5);
+    // ...but after two failures it's in your School rotation, so a solve is at your level.
+    await recordAttempt(store, user, krk({ success: false, userMoves: 20 }));
+    await recordAttempt(store, user, krk({ success: false, userMoves: 20 }));
+    const r = await recordAttempt(store, user, krk());
+    expect(r.school.atLevel).toBe(true);
+    expect(r.cloveGain).toBe(1);
+    expect(r.cloveNote).toBe(null);
+  });
+  it('explains a partial clove', async () => {
+    const { store, user } = await setup(1200);
+    const r = await recordAttempt(store, user, solve({ drillId: 'lucena', takebacks: 1, mateIn: null }));
+    expect(r.cloveGain).toBe(0.5);
+    expect(r.cloveNote).toMatch(/takeback/);
+  });
+  it('graduates a drill after five clean solves in a row and schedules a check-up', async () => {
+    const { store, user } = await setup(1200);
+    let r;
+    for (let i = 0; i < 5; i++) r = await recordAttempt(store, user, solve({ drillId: 'kqkp', mateIn: 8, mode: 'school' }));
+    expect(r.school.events.graduated).toBe(true);
+    expect(r.school.reviewDue).toBe('2026-11-22');
+    const p = (await getProgress(store, user.id)).kqkp;
+    expect(p.status).toBe('graduated');
+    const stored = await store.get('SELECT mode FROM attempts WHERE id = (SELECT MAX(id) FROM attempts)');
+    expect(stored.mode).toBe('school');
+  });
+  it('rebuilds rating and School streaks from older attempts', async () => {
+    const { store, user } = await setup(1200);
+    for (let i = 0; i < 3; i++) await recordAttempt(store, user, solve({ drillId: 'philidor', mateIn: null }));
+    // Forget the derived state, as for a player from before this feature.
+    await store.run('UPDATE users SET eg_rating = NULL, eg_games = 0 WHERE id = ?', user.id);
+    await store.run('UPDATE progress SET clean_streak = 0 WHERE user_id = ?', user.id);
+    const row = await store.get('SELECT * FROM users WHERE id = ?', user.id);
+    const u = await ensureEndgameRating(store, row);
+    expect(u.eg_games).toBe(3);
+    expect(u.eg_rating).toBeGreaterThan(1200);
+    expect((await getProgress(store, user.id)).philidor.cleanStreak).toBe(3);
+  });
+  it('shows endgame ratings on the family board', async () => {
+    const { store, user } = await setup(1200);
+    await recordAttempt(store, user, solve({ drillId: 'lucena', mateIn: null }));
+    const lb = await getLeaderboard(store, '2026-11-19');
+    expect(lb.players[0].egRating).toBeGreaterThan(1200);
   });
 });
 

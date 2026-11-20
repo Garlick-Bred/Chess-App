@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { DRILLS, DRILL_BY_ID, TIERS, MAX_LEVEL } from '@shared/drills.js';
 import { go, useApp } from '../App';
 import { Material, Stars, TierChip, LevelDots, CloveChip } from '../components/ui';
+import { curriculumFor, myRating } from '../school';
 
 const GOAL_LABEL: Record<string, string> = {
   mate: 'Checkmate',
@@ -12,6 +13,8 @@ const GOAL_LABEL: Record<string, string> = {
 
 export default function DrillsPage({ open }: { open?: string }) {
   const { me } = useApp();
+  const cur = curriculumFor(me);
+  const atLevel = (id: string) => cur.active.some((i: any) => i.id === id) || cur.due.some((i: any) => i.id === id);
   const detail = open ? DRILL_BY_ID[open] : null;
   return (
     <div className="page drills">
@@ -39,7 +42,7 @@ export default function DrillsPage({ open }: { open?: string }) {
                     <span className="goal-chip">{GOAL_LABEL[d.goal]}</span>
                   </div>
                   <b className="drill-name">{d.name}</b>
-                  <CloveChip drill={d} level={p?.level ?? 1} rating={me.user.rating} />
+                  <CloveChip drill={d} level={p?.level ?? 1} rating={myRating(me)} atLevel={atLevel(d.id)} />
                   <span className="small muted">{d.summary}</span>
                   <span className="row between drill-foot">
                     <Stars n={p?.stars ?? 0} />
@@ -64,6 +67,8 @@ export default function DrillsPage({ open }: { open?: string }) {
 
 function DrillDetail({ drill, onClose }: { drill: any; onClose: () => void }) {
   const { me } = useApp();
+  const cur = curriculumFor(me);
+  const atLevel = (id: string) => cur.active.some((i: any) => i.id === id) || cur.due.some((i: any) => i.id === id);
   const p = me.progress[drill.id];
   const current = p?.level ?? 1;
   const [level, setLevel] = useState(current);
@@ -80,7 +85,7 @@ function DrillDetail({ drill, onClose }: { drill: any; onClose: () => void }) {
         <h2>{drill.name}</h2>
         <Material drillId={drill.id} size={30} />
         <div style={{ marginTop: 8 }}>
-          <CloveChip drill={drill} level={level} rating={me.user.rating} />
+          <CloveChip drill={drill} level={level} rating={myRating(me)} atLevel={atLevel(drill.id)} />
         </div>
         <p className="muted">{drill.material}</p>
         <h4>How to win this</h4>

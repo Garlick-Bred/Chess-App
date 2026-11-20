@@ -5,6 +5,74 @@ import GarlickBulb from './GarlickBulb';
 import { fmtTime, AchIcon } from './ui';
 import { formatCloves } from '@shared/cloves.js';
 
+function niceDay(day: string | null): string {
+  if (!day) return '';
+  const [y, m, d] = day.split('-').map(Number);
+  return new Date(y, m - 1, d).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
+}
+
+/** Endgame rating change and Endgame School progress for this attempt. */
+function RatingAndSchool({ result, drill }: { result: AttemptResult; drill: any }) {
+  const r = result.rating;
+  const sc = result.school;
+  const ev = sc?.events ?? {};
+  let school: JSX.Element | null = null;
+  if (ev.graduated) {
+    school = (
+      <div className="school-note grad">
+        🎓 <b>Graduated!</b> {drill.name} leaves your daily rotation; a harder endgame takes its place. Check-up on {niceDay(sc.reviewDue)}.
+      </div>
+    );
+  } else if (ev.reviewPassed) {
+    school = (
+      <div className="school-note pass">
+        🩺 <b>Check-up passed.</b> Next one on {niceDay(sc.reviewDue)}.
+      </div>
+    );
+  } else if (ev.recheck) {
+    school = <div className="school-note">🩺 Solved with help, so this check-up comes back tomorrow.</div>;
+  } else if (ev.demoted) {
+    school = <div className="school-note warn">↩ {drill.name} is back in your School rotation for more practice.</div>;
+  } else if (r.rated && sc && sc.status === 'graduated') {
+    school = (
+      <div className="school-note">
+        🎓 You've graduated {drill.name}. Next check-up: {niceDay(sc.reviewDue)}.
+      </div>
+    );
+  } else if (r.rated && sc && sc.status === 'learning' && (sc.mode || sc.atLevel)) {
+    school = (
+      <div className="school-note">
+        <span className="streak-dots" aria-label={`${sc.cleanStreak} of ${sc.needed} clean solves in a row`}>
+          {Array.from({ length: sc.needed }, (_, i) => (
+            <i key={i} className={i < sc.cleanStreak ? 'on' : ''} />
+          ))}
+        </span>{' '}
+        {sc.cleanStreak === 0
+          ? `Clean solves in a row: 0/${sc.needed}. A clean solve has no help, no takebacks and efficient play.`
+          : `${sc.cleanStreak}/${sc.needed} clean solves in a row to graduate ${drill.name}.`}
+      </div>
+    );
+  }
+  return (
+    <>
+      {r && (
+        <div className={`rating-line ${r.delta > 0 ? 'up' : r.delta < 0 ? 'down' : ''}`}>
+          {r.rated ? (
+            <>
+              Endgame rating <b>{r.after}</b>{' '}
+              <span className="rating-delta">{r.delta > 0 ? `+${r.delta}` : r.delta === 0 ? '±0' : r.delta}</span>
+              <small className="muted"> · puzzle rated {r.puzzle}</small>
+            </>
+          ) : (
+            <span className="muted">Lesson replays don't change your endgame rating.</span>
+          )}
+        </div>
+      )}
+      {school}
+    </>
+  );
+}
+
 function CountUp({ to, ms = 900 }: { to: number; ms?: number }) {
   const [v, setV] = useState(0);
   useEffect(() => {
@@ -86,6 +154,7 @@ export default function ResultModal({ drill, level, outcome, result, submitError
                 </span>
               )}
             </div>
+            {result?.cloveNote && <div className="small muted clove-note">{formatCloves(result.cloveGain)} clove: {result.cloveNote}</div>}
           </div>
         )}
 
@@ -137,6 +206,8 @@ export default function ResultModal({ drill, level, outcome, result, submitError
             </div>
           )}
         </div>
+
+        {result && <RatingAndSchool result={result} drill={drill} />}
 
         {result?.progress.levelUp && <div className="level-up">Level up! {drill.name} is now level {result.progress.level}.</div>}
         {result && !result.progress.levelUp && ok && level === result.progress.level && !isMaxLevel && (

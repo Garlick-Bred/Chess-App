@@ -2206,3 +2206,190 @@ button.card:hover {
     display: none;
   }
 }
+
+/* ---------- Endgame School and endgame rating ---------- */
+.school-card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  border-left: 4px solid var(--green);
+}
+.school-title {
+  font-size: 1.15rem;
+}
+.eg-rating {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  line-height: 1.1;
+}
+.eg-rating b {
+  font-size: 1.7rem;
+  font-weight: 900;
+}
+.eg-rating small {
+  color: var(--muted);
+  font-size: 0.75rem;
+}
+.eg-rating.big b {
+  font-size: 2.6rem;
+}
+.eg-rating .up {
+  color: var(--green-hi);
+  font-weight: 800;
+}
+.eg-rating .down {
+  color: var(--red);
+  font-weight: 800;
+}
+.school-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 4px;
+}
+.school-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-width: 0;
+  padding: 9px 10px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.school-row:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+.school-row .grow {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.school-detail {
+  color: var(--muted);
+  font-size: 0.8rem;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.school-row.placed,
+.school-row.upcoming {
+  opacity: 0.75;
+}
+.school-due {
+  background: rgba(247, 198, 49, 0.1);
+  border: 1px solid rgba(247, 198, 49, 0.35);
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-size: 0.9rem;
+}
+.tag {
+  display: inline-block;
+  font-size: 0.7rem;
+  font-weight: 800;
+  padding: 1px 6px;
+  border-radius: 6px;
+  vertical-align: middle;
+}
+.tag.warn {
+  background: rgba(232, 95, 79, 0.18);
+  color: #ff9c8f;
+}
+.streak-dots {
+  display: inline-flex;
+  gap: 3px;
+  vertical-align: middle;
+}
+.streak-dots i {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.14);
+}
+.streak-dots i.on {
+  background: var(--green-hi);
+}
+.school-hero {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 18px;
+  flex-wrap: wrap;
+}
+.school-hero > div:first-child {
+  flex: 1 1 300px;
+}
+.school-hero h1 {
+  margin: 4px 0 8px;
+}
+.page.school {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.rating-line {
+  text-align: center;
+  margin-top: 10px;
+  font-size: 0.95rem;
+}
+.rating-line .rating-delta {
+  font-weight: 900;
+}
+.rating-line.up .rating-delta {
+  color: var(--green-hi);
+}
+.rating-line.down .rating-delta {
+  color: var(--red);
+}
+.school-note {
+  margin-top: 8px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.04);
+  font-size: 0.88rem;
+  text-align: center;
+}
+.school-note.grad,
+.school-note.pass {
+  background: rgba(129, 182, 76, 0.15);
+  border: 1px solid rgba(129, 182, 76, 0.4);
+}
+.school-note.warn {
+  background: rgba(232, 95, 79, 0.12);
+}
+.clove-note {
+  text-align: center;
+  margin-top: 2px;
+}
+@media (max-width: 520px) {
+  .school-hero .eg-rating {
+    align-items: flex-start;
+  }
+}
+.school-name {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.school-row-material {
+  flex: none;
+}
+@media (max-width: 520px) {
+  /* Phones: the drill name matters more than the material icons. */
+  .school-row-material {
+    display: none;
+  }
+}
+.school-rate::before {
+  content: '·';
+  margin-right: 4px;
+}

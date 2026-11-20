@@ -153,6 +153,11 @@ Seconds-per-move drops with level (e.g. rook mate: 4.5 → 2.5 s).
   Level 3 is worth 1.5x and the speed levels (4-5) 2x, capped at one clove, so
   getting fast at an easy mate still pays. A piece hint or takeback halves the
   value. A written hint costs points but not clove value.
+* **Your level means your results, too:** a drill in your Endgame School
+  rotation (or a due check-up) always fills a whole clove, even if the
+  rating gap says "easy", and the ratings used are your endgame rating. A
+  stretch drill (350+ above you) also fills a whole clove. When a solve fills
+  less, the result screen says why (easy for your rating, takeback used...).
 * **Lesson replays:** solving a puzzle again right after its lesson earns a
   **full clove** whatever the drill, at most twice a day. Replays don't count
   toward level-ups or personal bests.
@@ -194,7 +199,48 @@ to explain.
   the same. Either way the replay is worth a clove, and the replay has a
   "Watch the lesson again" link.
 
-## 8. Variety from a fixed bank
+## 8. Endgame School
+
+The main way to train (`shared/curriculum.js`). It serves endgames at your
+level and moves you on once you've shown you know them.
+
+* **Now learning:** 3 drills at a time, rotated so you cycle between endgames
+  of similar difficulty (never the same one twice in a row). Drills you're
+  struggling with (under 60% solved over 2+ tries) come first, even if they
+  are "easy" for your rating; then the drills closest to your endgame rating.
+  Stretch drills (350+ above you, e.g. bishop + knight at 1200) wait until
+  the ones below them are learned.
+* **Graduating:** 5 clean solves in a row (no failure, hints or takebacks,
+  70%+ efficiency) graduate a drill: it leaves the rotation and the next one
+  moves in. Any attempt at the drill counts, not just School ones.
+* **Check-ups:** a graduated drill comes back after 3, 7, 14, 30 and 60 days,
+  at most 2 check-ups a day. A clean pass pushes the next one out; a solve
+  with help re-checks tomorrow; a failure sends it back to "Now learning".
+* **Placed out:** drills 500+ below your rating are skipped unless your
+  results say otherwise.
+* Lesson replays don't count toward graduation.
+* Existing players' streaks were rebuilt from their past attempts.
+
+## 9. Endgame rating
+
+An Elo-style rating on the chess rating scale (`shared/rating.js`).
+
+* **Puzzle rating** = the drill's target rating, -100 at level 1, +100 at
+  level 3, +175 / +250 at the speed levels. (Rook mate 800, Lucena 1400,
+  bishop + knight 1800 at level 2.)
+* **Result:** fail 0; clean solve 1; with a written hint 0.75; with a piece
+  hint or takeback 0.5; under 50% efficiency -0.25 (min 0.25 for any solve).
+* **Change** = K x (result - expected), expected = 1 / (1 + 10^((puzzle -
+  you) / 400)). K is 40 for your first 15 rated attempts, 28 up to 50, then
+  20. Solving a puzzle rated 400+ below you adds nothing.
+* **Anchor:** it starts at your chess rating and each rated attempt closes 3%
+  of the gap back toward it (never turning a gain into a loss or the other
+  way round), so it settles near your real strength, a couple of hundred
+  points above or below depending on your endgames.
+* Lesson replays are unrated. Existing players were rated by replaying their
+  history: Mitch comes out at about 1190 against a 1200 chess.com rating.
+
+## 10. Variety from a fixed bank
 
 `shared/puzzles.json` holds 60 positions per drill (660 in total), each one
 verified against the tablebase, non-trivial (at least one move throws the result

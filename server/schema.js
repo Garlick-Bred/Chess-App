@@ -11,6 +11,8 @@ export const SCHEMA = [
     settings      TEXT NOT NULL DEFAULT '{}',
     rating        INTEGER,
     rating_source TEXT,
+    eg_rating     REAL,
+    eg_games      INTEGER NOT NULL DEFAULT 0,
     created_at    INTEGER NOT NULL
   )`,
   `CREATE TABLE IF NOT EXISTS sessions (
@@ -42,6 +44,10 @@ export const SCHEMA = [
     clove_gain   REAL NOT NULL DEFAULT 0,
     written_hints INTEGER NOT NULL DEFAULT 0,
     lesson_replay INTEGER NOT NULL DEFAULT 0,
+    mode         TEXT,
+    puzzle_rating INTEGER,
+    eg_before    REAL,
+    eg_after     REAL,
     breakdown    TEXT NOT NULL DEFAULT '[]',
     day          TEXT NOT NULL,
     created_at   INTEGER NOT NULL
@@ -53,6 +59,10 @@ export const SCHEMA = [
     drill_id   TEXT NOT NULL,
     level      INTEGER NOT NULL DEFAULT 1,
     qualifying INTEGER NOT NULL DEFAULT 0,
+    clean_streak INTEGER NOT NULL DEFAULT 0,
+    status     TEXT,
+    review_due TEXT,
+    review_step INTEGER NOT NULL DEFAULT 0,
     PRIMARY KEY (user_id, drill_id)
   )`,
   `CREATE TABLE IF NOT EXISTS days (
@@ -86,7 +96,7 @@ export const SCHEMA = [
 ];
 
 /** Bump when SCHEMA or ADDED_COLUMNS change, so existing databases migrate. */
-export const SCHEMA_VERSION = 3;
+export const SCHEMA_VERSION = 4;
 
 // Columns added after the first release; added to older databases on start.
 export const ADDED_COLUMNS = [
@@ -95,6 +105,17 @@ export const ADDED_COLUMNS = [
   ['attempts', 'clove_gain', 'REAL NOT NULL DEFAULT 0'],
   ['attempts', 'written_hints', 'INTEGER NOT NULL DEFAULT 0'],
   ['attempts', 'lesson_replay', 'INTEGER NOT NULL DEFAULT 0'],
+  // v4: endgame rating and Endgame School
+  ['users', 'eg_rating', 'REAL'],
+  ['users', 'eg_games', 'INTEGER NOT NULL DEFAULT 0'],
+  ['attempts', 'mode', 'TEXT'],
+  ['attempts', 'puzzle_rating', 'INTEGER'],
+  ['attempts', 'eg_before', 'REAL'],
+  ['attempts', 'eg_after', 'REAL'],
+  ['progress', 'clean_streak', 'INTEGER NOT NULL DEFAULT 0'],
+  ['progress', 'status', 'TEXT'],
+  ['progress', 'review_due', 'TEXT'],
+  ['progress', 'review_step', 'INTEGER NOT NULL DEFAULT 0'],
 ];
 
 /**

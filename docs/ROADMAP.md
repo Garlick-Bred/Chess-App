@@ -16,6 +16,8 @@
 * "Keep going or done for today?" when the bulb fills, with a wrap-up page.
 * Phone layout: a bottom tab bar (all six sections fit), nothing scrolls
   sideways down to 320 px wide, and open tabs reload themselves after a deploy.
+* Endgame School (curriculum with graduation and spaced check-ups), an
+  endgame rating, and full cloves for drills at your level.
 
 ## Still worth building
 
@@ -26,9 +28,9 @@ Roughly in order of value for you:
    on the board (see the [report](reports/ham_sandmitch-endgames.md)). A real
    game clock per drill (for example 30 s + 1 s per move for K+Q) would copy the
    blitz pressure where you actually lose.
-2. **Spaced repetition of your misses.** Store every position you failed or
-   needed a takeback on, and serve that exact position again after 1, 3 and
-   7 days. The attempts table already stores the start position.
+2. **Spaced repetition of exact positions.** Endgame School already spaces
+   check-ups per drill; the next step is to re-serve the exact positions you
+   failed after 1, 3 and 7 days (the attempts table stores them).
 3. **Positions from your own games.** The analysis found the exact moves where
    you threw away tablebase wins or draws. Turn them into a personal deck.
 4. **The endgames you actually reach most** (rook + minor piece, queen +

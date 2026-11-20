@@ -13,6 +13,7 @@ import {
   getStats,
   getLeaderboard,
   applyStartingLevels,
+  ensureEndgameRating,
   httpError,
 } from './game.js';
 import { RATING_SOURCES, validRating } from '../shared/cloves.js';
@@ -38,6 +39,8 @@ function publicUser(u) {
     color: u.color,
     rating: u.rating ?? null,
     ratingSource: u.rating_source ?? null,
+    egRating: u.eg_rating != null ? Math.round(u.eg_rating) : null,
+    egGames: u.eg_games ?? 0,
     settings: { playAs: 'random', sound: true, coordinates: true, autoQueen: false, ...settings },
   };
 }
@@ -90,7 +93,7 @@ export function createApi({ store, env = {} }) {
     const needUser = async () => {
       const u = await auth.sessionUser(store, token);
       if (!u) throw httpError(401, 'Please log in');
-      return u;
+      return ensureEndgameRating(store, u);
     };
 
     if (method === 'GET' && path === '/api/health') return json({ ok: true });
@@ -188,8 +191,12 @@ export function createApi({ store, env = {} }) {
         source,
         u.id,
       );
-      if (rating !== u.rating) await applyStartingLevels(store, u.id, rating);
-      return json({ user: publicUser(await store.get('SELECT * FROM users WHERE id = ?', u.id)) });
+      if (rating !== u.rating) {
+        await applyStartingLevels(store, u.id, rating);
+        // No rated attempts yet: the endgame rating restarts from the new chess rating.
+        if (!u.eg_games) await store.run('UPDATE users SET eg_rating = NULL WHERE id = ?', u.id);
+      }
+      return json({ user: publicUser(await ensureEndgameRating(store, await store.get('SELECT * FROM users WHERE id = ?', u.id))) });
     }
 
     if (method === 'POST' && path === '/api/attempts') {

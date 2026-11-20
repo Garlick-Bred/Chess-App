@@ -4,7 +4,9 @@
 // (local SQLite or Cloudflare D1).
 import { DRILLS, DRILL_BY_ID, MAX_LEVEL, parSeconds } from '../shared/drills.js';
 import { scoreAttempt, qualifiesForLevel, SOLVES_TO_LEVEL, BULB_CLOVES, BULB_BONUS, PB_BONUS_SHARE, bulbStreak, rankFor, masteryStars, addDays } from '../shared/scoring.js';
-import { cloveValue, startingLevel, LESSON_CLOVES_PER_DAY } from '../shared/cloves.js';
+import { cloveValue, cloveShortfall, startingLevel, LESSON_CLOVES_PER_DAY } from '../shared/cloves.js';
+import { puzzleRating, solveScore, rateAttempt, startingEndgameRating } from '../shared/rating.js';
+import { buildCurriculum, atYourLevel, advanceSchool, isClean, GRADUATE_AFTER } from '../shared/curriculum.js';
 import { ACHIEVEMENTS, newlyUnlocked } from '../shared/achievements.js';
 import { GRADES } from '../shared/grading.js';
 
@@ -13,7 +15,10 @@ const EPS = 1e-9;
 const int = (v, lo, hi) => Math.max(lo, Math.min(hi, Math.round(Number(v) || 0)));
 
 export async function getProgress(store, userId) {
-  const rows = await store.all('SELECT drill_id, level, qualifying FROM progress WHERE user_id = ?', userId);
+  const rows = await store.all(
+    'SELECT drill_id, level, qualifying, clean_streak, status, review_due, review_step FROM progress WHERE user_id = ?',
+    userId,
+  );
   const solves = await store.all(
     `SELECT drill_id, MIN(CASE WHEN success THEN duration_ms * 1.0 / MAX(user_moves, 1) END) best_spm,
             MIN(CASE WHEN success THEN duration_ms END) best_ms, COUNT(*) attempts, SUM(success) solves
@@ -29,6 +34,10 @@ export async function getProgress(store, userId) {
     const rec = {
       level: p.level,
       qualifying: p.qualifying,
+      cleanStreak: p.clean_streak ?? 0,
+      status: p.status ?? 'learning',
+      reviewDue: p.review_due ?? null,
+      reviewStep: p.review_step ?? 0,
       solves: s.solves ?? 0,
       attempts: s.attempts ?? 0,
       bestSecondsPerMove: s.best_spm != null ? s.best_spm / 1000 : null,
@@ -95,7 +104,47 @@ export async function getTotals(store, userId, today) {
 
 export async function getDay(store, userId, day) {
   const row = await store.get('SELECT cloves, bulb_done, bonus FROM days WHERE user_id = ? AND day = ?', userId, day);
-  return { day, cloves: row?.cloves ?? 0, bulbDone: !!row?.bulb_done, bonus: row?.bonus ?? 0, size: BULB_CLOVES };
+  const rev = await store.get("SELECT COUNT(*) n FROM attempts WHERE user_id = ? AND day = ? AND mode = 'review'", userId, day);
+  return { day, cloves: row?.cloves ?? 0, bulbDone: !!row?.bulb_done, bonus: row?.bonus ?? 0, size: BULB_CLOVES, reviews: rev?.n ?? 0 };
+}
+
+/**
+ * Give a player an endgame rating and School state the first time they need
+ * one, by replaying their attempts so far (so existing players keep credit
+ * for what they've already done). Returns the user row with eg_rating set.
+ */
+export async function ensureEndgameRating(store, user) {
+  if (user.eg_rating != null) return user;
+  const rows = await store.all(
+    'SELECT id, drill_id, level, success, hints, written_hints, takebacks, efficiency, lesson_replay, day FROM attempts WHERE user_id = ? ORDER BY id',
+    user.id,
+  );
+  let rating = startingEndgameRating(user.rating);
+  let games = 0;
+  const school = {};
+  const writes = [];
+  for (const r of rows) {
+    const drill = DRILL_BY_ID[r.drill_id];
+    if (!drill || r.lesson_replay) continue;
+    const a = { success: !!r.success, hints: r.hints, writtenHints: r.written_hints, takebacks: r.takebacks, efficiency: r.efficiency, goal: drill.goal };
+    const puzzle = puzzleRating(drill, r.level);
+    const res = rateAttempt({ rating, games, puzzle, score: solveScore(a), anchor: user.rating });
+    writes.push(['UPDATE attempts SET eg_before = ?, eg_after = ?, puzzle_rating = ? WHERE id = ?', [res.before, res.after, puzzle, r.id]]);
+    rating = res.after;
+    games++;
+    school[r.drill_id] = advanceSchool(school[r.drill_id], { success: a.success, clean: isClean(a) }, r.day);
+  }
+  for (const [drillId, st] of Object.entries(school)) {
+    writes.push([
+      `INSERT INTO progress (user_id, drill_id, level, qualifying, clean_streak, status, review_due, review_step) VALUES (?,?,1,0,?,?,?,?)
+       ON CONFLICT(user_id, drill_id) DO UPDATE SET clean_streak = excluded.clean_streak, status = excluded.status,
+         review_due = excluded.review_due, review_step = excluded.review_step`,
+      [user.id, drillId, st.cleanStreak, st.status, st.reviewDue, st.reviewStep],
+    ]);
+  }
+  writes.push(['UPDATE users SET eg_rating = ?, eg_games = ? WHERE id = ?', [rating, games, user.id]]);
+  for (let i = 0; i < writes.length; i += 50) await store.batch(writes.slice(i, i + 50));
+  return { ...user, eg_rating: rating, eg_games: games };
 }
 
 /**
@@ -106,10 +155,12 @@ export async function recordAttempt(store, user, body) {
   const drill = DRILL_BY_ID[body.drillId];
   if (!drill) throw httpError(400, 'Unknown drill');
   const day = DAY_RE.test(body.day ?? '') ? body.day : new Date().toISOString().slice(0, 10);
-  const progressRow = (await store.get('SELECT level, qualifying FROM progress WHERE user_id = ? AND drill_id = ?', user.id, drill.id)) ?? {
-    level: 1,
-    qualifying: 0,
-  };
+  user = await ensureEndgameRating(store, user);
+  const progressRow = (await store.get(
+    'SELECT level, qualifying, clean_streak, status, review_due, review_step FROM progress WHERE user_id = ? AND drill_id = ?',
+    user.id,
+    drill.id,
+  )) ?? { level: 1, qualifying: 0, clean_streak: 0, status: null, review_due: null, review_step: 0 };
   const level = int(body.level, 1, Math.min(MAX_LEVEL, progressRow.level));
   const puzzle = { mateIn: body.mateIn != null ? int(body.mateIn, 1, 60) : null };
   const par = parSeconds(drill, puzzle, level);
@@ -134,6 +185,7 @@ export async function recordAttempt(store, user, body) {
     onlyMoves: int(body.onlyMoves, 0, 100),
     parSeconds: par,
   };
+  const mode = ['school', 'review'].includes(body.mode) ? body.mode : null;
   const score = scoreAttempt(attempt);
   const breakdown = [...score.breakdown];
   let points = score.total;
@@ -171,9 +223,32 @@ export async function recordAttempt(store, user, body) {
     if (newLevel === MAX_LEVEL) qualifying = Math.min(qualifying, SOLVES_TO_LEVEL);
   }
 
+  // Endgame School: where this drill stands before the attempt. Drills in
+  // your rotation (and due check-ups) are "your level".
+  const egBefore = user.eg_rating;
+  const curriculum = buildCurriculum({ drills: DRILLS, progress: await getProgress(store, user.id), rating: egBefore, today: day });
+  const atLevel = atYourLevel(curriculum, drill.id);
+
+  // Endgame rating (lesson replays are unrated: the answer was just shown).
+  const quality = { success, hints: attempt.hints, writtenHints: attempt.writtenHints, takebacks: attempt.takebacks, efficiency: score.efficiency, goal: drill.goal };
+  const puzzleR = puzzleRating(drill, level);
+  const rated = !attempt.lessonReplay;
+  const rating = rated
+    ? rateAttempt({ rating: egBefore, games: user.eg_games ?? 0, puzzle: puzzleR, score: solveScore(quality), anchor: user.rating })
+    : { before: egBefore, after: egBefore, delta: 0, puzzle: puzzleR };
+  const school = rated
+    ? advanceSchool(
+        { cleanStreak: progressRow.clean_streak, status: progressRow.status, reviewDue: progressRow.review_due, reviewStep: progressRow.review_step },
+        { success, clean: isClean(quality) },
+        day,
+      )
+    : { cleanStreak: progressRow.clean_streak ?? 0, status: progressRow.status ?? 'learning', reviewDue: progressRow.review_due, reviewStep: progressRow.review_step ?? 0, events: {} };
+
   // Garlick bulb: a solve fills part of a clove, depending on how hard the
   // drill is for this player (see shared/cloves.js).
-  let cloveGain = success ? cloveValue({ drill, level, rating: user.rating, hints: attempt.hints, takebacks: attempt.takebacks, lessonReplay: attempt.lessonReplay }) : 0;
+  const cloveArgs = { drill, level, rating: egBefore, hints: attempt.hints, takebacks: attempt.takebacks, lessonReplay: attempt.lessonReplay, atLevel };
+  let cloveGain = success ? cloveValue(cloveArgs) : 0;
+  const cloveNote = success && !attempt.lessonReplay && cloveGain < 1 - EPS ? cloveShortfall(cloveArgs) : null;
   let lessonCloveCapped = false;
   if (cloveGain > 0 && attempt.lessonReplay) {
     const used = await store.get(
@@ -198,8 +273,9 @@ export async function recordAttempt(store, user, body) {
   const writes = [
     [
       `INSERT INTO attempts (user_id, drill_id, level, fen, success, reason, duration_ms, user_moves, waste_plies, efficiency, grades,
-         hints, takebacks, only_moves, par_seconds, speed_factor, perfect, points, clove_gain, written_hints, lesson_replay, breakdown, day, created_at)
-       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+         hints, takebacks, only_moves, par_seconds, speed_factor, perfect, points, clove_gain, written_hints, lesson_replay,
+         mode, puzzle_rating, eg_before, eg_after, breakdown, day, created_at)
+       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
       [
         user.id,
         drill.id,
@@ -222,17 +298,23 @@ export async function recordAttempt(store, user, body) {
         cloveGain,
         attempt.writtenHints,
         attempt.lessonReplay ? 1 : 0,
+        mode,
+        rated ? puzzleR : null,
+        rated ? rating.before : null,
+        rated ? rating.after : null,
         JSON.stringify(breakdown),
         day,
         Date.now(),
       ],
     ],
     [
-      `INSERT INTO progress (user_id, drill_id, level, qualifying) VALUES (?,?,?,?)
-       ON CONFLICT(user_id, drill_id) DO UPDATE SET level = excluded.level, qualifying = excluded.qualifying`,
-      [user.id, drill.id, newLevel, qualifying],
+      `INSERT INTO progress (user_id, drill_id, level, qualifying, clean_streak, status, review_due, review_step) VALUES (?,?,?,?,?,?,?,?)
+       ON CONFLICT(user_id, drill_id) DO UPDATE SET level = excluded.level, qualifying = excluded.qualifying,
+         clean_streak = excluded.clean_streak, status = excluded.status, review_due = excluded.review_due, review_step = excluded.review_step`,
+      [user.id, drill.id, newLevel, qualifying, school.cleanStreak, school.status, school.reviewDue, school.reviewStep],
     ],
   ];
+  if (rated) writes.push(['UPDATE users SET eg_rating = ?, eg_games = eg_games + 1 WHERE id = ?', [rating.after, user.id]]);
   if (cloveGain > 0) {
     writes.push([
       `INSERT INTO days (user_id, day, cloves, bulb_done, bonus) VALUES (?,?,?,?,?)
@@ -260,8 +342,19 @@ export async function recordAttempt(store, user, body) {
     parSeconds: par,
     personalBest: pb,
     cloveGain,
+    cloveNote,
     lessonReplay: attempt.lessonReplay,
     lessonCloveCapped,
+    rating: { rated, before: Math.round(rating.before), after: Math.round(rating.after), delta: rating.delta, puzzle: puzzleR },
+    school: {
+      atLevel,
+      mode,
+      cleanStreak: school.cleanStreak,
+      needed: GRADUATE_AFTER,
+      status: school.status,
+      reviewDue: school.reviewDue,
+      events: school.events,
+    },
     progress: { level: newLevel, qualifying, levelUp, needed: SOLVES_TO_LEVEL, qualified: qualifies },
     day: { ...(await getDay(store, user.id, day)), bulbCompletedNow, bulbBonus: bulbCompletedNow ? BULB_BONUS : 0 },
     newAchievements: unlocked.map((id) => publicAchievement(ACHIEVEMENTS.find((a) => a.id === id))),
@@ -295,6 +388,10 @@ export async function getStats(store, userId, today) {
   );
   const from = addDays(today, -29);
   const days = await store.all('SELECT day, cloves, bulb_done FROM days WHERE user_id = ? AND day >= ? ORDER BY day', userId, from);
+  const ratingRows = await store.all(
+    'SELECT day, eg_after FROM attempts WHERE user_id = ? AND eg_after IS NOT NULL ORDER BY id DESC LIMIT 200',
+    userId,
+  );
   return {
     perDrill: perDrill.map((r) => ({
       drillId: r.drill_id,
@@ -322,14 +419,16 @@ export async function getStats(store, userId, today) {
       createdAt: r.created_at,
     })),
     days,
+    ratingHistory: ratingRows.reverse().map((r) => ({ day: r.day, rating: Math.round(r.eg_after) })),
   };
 }
 
 export async function getLeaderboard(store, today) {
   const weekFrom = addDays(today, -6);
-  const users = await store.all('SELECT id, display_name, username, avatar, color, rating, rating_source FROM users ORDER BY id');
+  const users = await store.all('SELECT id, display_name, username, avatar, color, rating, rating_source, eg_rating, eg_games FROM users ORDER BY id');
   const players = [];
-  for (const u of users) {
+  for (let u of users) {
+    u = await ensureEndgameRating(store, u);
     const t = await getTotals(store, u.id, today);
     const w = (await store.get('SELECT COALESCE(SUM(points),0) p FROM attempts WHERE user_id = ? AND day >= ?', u.id, weekFrom)).p;
     const wb = (await store.get('SELECT COALESCE(SUM(bonus),0) p FROM days WHERE user_id = ? AND day >= ?', u.id, weekFrom)).p;
@@ -341,6 +440,8 @@ export async function getLeaderboard(store, today) {
       color: u.color,
       rating: u.rating,
       ratingSource: u.rating_source,
+      egRating: u.eg_rating != null ? Math.round(u.eg_rating) : null,
+      egGames: u.eg_games ?? 0,
       points: t.points,
       weekPoints: w + wb,
       solves: t.solves,

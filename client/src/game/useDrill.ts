@@ -76,6 +76,8 @@ export interface DrillOptions {
   /** Play this exact position (e.g. replaying a lesson) instead of a random one. */
   fixed?: { fen: string; mateIn: number | null } | null;
   lessonReplay?: boolean;
+  /** Endgame School puzzle ('school') or check-up ('review'). */
+  mode?: 'school' | 'review' | null;
 }
 
 const RECENT_KEY = 'ge_recent_puzzles';
@@ -160,7 +162,9 @@ interface Game extends DrillView {
   distances: (number | null)[];
 }
 
-export function useDrill({ drillId, level, playAs, fixed = null, lessonReplay = false }: DrillOptions) {
+export function useDrill({ drillId, level, playAs, fixed = null, lessonReplay = false, mode = null }: DrillOptions) {
+  const modeRef = useRef(mode);
+  modeRef.current = mode;
   const g = useRef<Game | null>(null);
   const [, setTick] = useState(0);
   const rerender = useCallback(() => setTick((t) => t + 1), []);
@@ -328,6 +332,7 @@ export function useDrill({ drillId, level, playAs, fixed = null, lessonReplay = 
         onlyMoves: s.onlyMoves,
         mateIn: s.puzzle.mateIn,
         lessonReplay: s.lessonReplay,
+        mode: modeRef.current,
         day: localDay(),
       });
       if (!sameGame(id)) return;
