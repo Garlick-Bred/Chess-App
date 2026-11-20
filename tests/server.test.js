@@ -358,3 +358,35 @@ describe('HTTP API (fetch handler)', () => {
     expect(me.user.ratingSource).toBe('fide');
   });
 });
+
+describe('one sign-in across Garlick sites', () => {
+  const call = (handle, url, { method = 'GET', body, cookie } = {}) =>
+    handle(new Request(url, { method, body: body ? JSON.stringify(body) : undefined, headers: { 'content-type': 'application/json', ...(cookie ? { cookie } : {}) } }));
+  const setCookies = (res) => res.headers.getSetCookie();
+
+  it('shares the session cookie across *.garlick.ca, but not on other hosts', async () => {
+    const store = createNodeStore(':memory:');
+    const handle = createApi({ store, env: { COOKIE_DOMAIN: 'garlick.ca' } });
+    const reg = await call(handle, 'https://endgames.garlick.ca/api/auth/register', { method: 'POST', body: { username: 'sso', password: 'password1' } });
+    const [session, legacy] = setCookies(reg);
+    expect(session).toMatch(/^garlick_session=.+; Domain=garlick\.ca; Secure/);
+    expect(legacy).toMatch(/^ge_session=; .*Max-Age=0/);
+    const dev = await call(handle, 'https://garlick-endgames.example.workers.dev/api/auth/login', { method: 'POST', body: { username: 'sso', password: 'password1' } });
+    expect(setCookies(dev)[0]).not.toMatch(/Domain=/);
+  });
+
+  it('accepts the old ge_session cookie and upgrades it to the shared one', async () => {
+    const store = createNodeStore(':memory:');
+    const handle = createApi({ store, env: { COOKIE_DOMAIN: 'garlick.ca' } });
+    const reg = await call(handle, 'https://endgames.garlick.ca/api/auth/register', { method: 'POST', body: { username: 'old', password: 'password1' } });
+    const token = setCookies(reg)[0].split(';')[0].split('=')[1];
+    const me = await call(handle, 'https://endgames.garlick.ca/api/me', { cookie: `ge_session=${token}` });
+    expect(me.status).toBe(200);
+    expect(setCookies(me)[0]).toBe(setCookies(reg)[0]);
+    const again = await call(handle, 'https://endgames.garlick.ca/api/me', { cookie: `garlick_session=${token}` });
+    expect(setCookies(again)).toEqual([]);
+    const out = await call(handle, 'https://endgames.garlick.ca/api/auth/logout', { method: 'POST', cookie: `garlick_session=${token}` });
+    expect(setCookies(out)[0]).toMatch(/^garlick_session=; .*Max-Age=0; Domain=garlick\.ca/);
+    expect((await call(handle, 'https://endgames.garlick.ca/api/me', { cookie: `garlick_session=${token}` })).status).toBe(401);
+  });
+});

@@ -40,7 +40,7 @@ export default {
     // Cookies get the Secure flag whenever the request came in over HTTPS.
     handle ??= createApi({
       store: createD1Store(env.DB),
-      env: { INVITE_CODE: env.INVITE_CODE ?? '', TABLEBASE_URL: env.TABLEBASE_URL },
+      env: { INVITE_CODE: env.INVITE_CODE ?? '', TABLEBASE_URL: env.TABLEBASE_URL, COOKIE_DOMAIN: env.COOKIE_DOMAIN ?? '' },
     });
     const api = await handle(request, ctx);
     if (api) return api;

@@ -119,6 +119,7 @@ npm test
 | `DB_FILE` | `data/garlick.db` | SQLite file (local server) |
 | `INVITE_CODE` | *(empty)* | If set, new accounts need this code. On Cloudflare it is a Worker secret |
 | `COOKIE_SECURE` | *(auto)* | Session cookies are Secure on HTTPS. Set to `1` to force it behind a TLS proxy |
+| `COOKIE_DOMAIN` | *(empty)* | e.g. `garlick.ca`: one sign-in shared with the other Garlick sites (Garlick Openings) |
 | `TABLEBASE_URL` | Lichess | Alternative tablebase endpoint |
 
 ## Deploying to Cloudflare

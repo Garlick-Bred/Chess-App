@@ -24,10 +24,10 @@ const DAY_RE = /^\d{4}-\d{2}-\d{2}$/;
 const MAX_BODY = 64 * 1024;
 
 function json(data, status = 200, headers = {}) {
-  return new Response(JSON.stringify(data), {
-    status,
-    headers: { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store', ...headers },
-  });
+  // A header value may be a list (several Set-Cookie headers).
+  const h = new Headers({ 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' });
+  for (const [k, v] of Object.entries(headers)) for (const x of [].concat(v)) h.append(k, x);
+  return new Response(JSON.stringify(data), { status, headers: h });
 }
 
 function publicUser(u) {
@@ -50,6 +50,7 @@ function publicUser(u) {
  * @param {{ store: object, env?: Record<string,string> }} opts
  *   env.INVITE_CODE    - if set, sign-up requires it
  *   env.COOKIE_SECURE  - "1" forces Secure cookies (otherwise https requests get them)
+ *   env.COOKIE_DOMAIN  - e.g. "garlick.ca": share the sign-in with the other Garlick sites
  *   env.TABLEBASE_URL  - alternative tablebase endpoint
  */
 export function createApi({ store, env = {} }) {
@@ -89,7 +90,12 @@ export function createApi({ store, env = {} }) {
     const method = request.method;
     const path = url.pathname;
     const secure = env.COOKIE_SECURE === '1' || url.protocol === 'https:';
-    const token = auth.parseCookies(request.headers.get('cookie'))[auth.COOKIE];
+    const domain = auth.cookieDomain(url.hostname, env.COOKIE_DOMAIN);
+    const cookies = auth.parseCookies(request.headers.get('cookie'));
+    const token = cookies[auth.COOKIE] || cookies[auth.LEGACY_COOKIE];
+    // Signed in with the old host-only cookie: move it to the shared one.
+    const legacyOnly = !cookies[auth.COOKIE] && !!cookies[auth.LEGACY_COOKIE];
+    const signIn = (t) => ({ 'Set-Cookie': [auth.sessionCookie(t, { secure, domain }), auth.clearCookie({ secure, name: auth.LEGACY_COOKIE })] });
     const day = DAY_RE.test(url.searchParams.get('day') ?? '') ? url.searchParams.get('day') : new Date().toISOString().slice(0, 10);
     const needUser = async () => {
       const u = await auth.sessionUser(store, token);
@@ -126,7 +132,7 @@ export function createApi({ store, env = {} }) {
       const userId = r.lastId ?? (await store.get('SELECT id FROM users WHERE username = ?', b.username)).id;
       await applyStartingLevels(store, userId, rating);
       const t = await auth.createSession(store, userId);
-      return json({ ok: true }, 200, { 'Set-Cookie': auth.sessionCookie(t, { secure }) });
+      return json({ ok: true }, 200, signIn(t));
     }
 
     if (method === 'POST' && path === '/api/auth/login') {
@@ -140,19 +146,19 @@ export function createApi({ store, env = {} }) {
       }
       await auth.clearFailures(store, key);
       const t = await auth.createSession(store, user.id);
-      return json({ ok: true }, 200, { 'Set-Cookie': auth.sessionCookie(t, { secure }) });
+      return json({ ok: true }, 200, signIn(t));
     }
 
     if (method === 'POST' && path === '/api/auth/logout') {
       await auth.destroySession(store, token);
-      return json({ ok: true }, 200, { 'Set-Cookie': auth.clearCookie({ secure }) });
+      return json({ ok: true }, 200, { 'Set-Cookie': [auth.clearCookie({ secure, domain }), auth.clearCookie({ secure, name: auth.LEGACY_COOKIE })] });
     }
 
     if (method === 'GET' && path === '/api/me') {
       const u = await needUser();
       await applyShields(store, u.id, day);
       const [totals, today, progress] = await Promise.all([getTotals(store, u.id, day), getDay(store, u.id, day), getProgress(store, u.id)]);
-      return json({ user: publicUser(u), totals, today, progress });
+      return json({ user: publicUser(u), totals, today, progress }, 200, legacyOnly ? signIn(token) : {});
     }
 
     if (method === 'PUT' && path === '/api/me') {

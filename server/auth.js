@@ -4,7 +4,12 @@
 const SESSION_DAYS = 60;
 // Cloudflare Workers allow at most 100,000 PBKDF2 iterations.
 const ITERATIONS = 100_000;
-export const COOKIE = 'ge_session';
+// One sign-in for every Garlick site: the session cookie is shared across
+// *.garlick.ca (set COOKIE_DOMAIN=garlick.ca) and the sessions live in this
+// site's database, which Garlick Openings also reads.
+export const COOKIE = 'garlick_session';
+/** The cookie used before single sign-in (host-only); still accepted and upgraded. */
+export const LEGACY_COOKIE = 'ge_session';
 export const USERNAME_RE = /^[a-zA-Z0-9_-]{3,20}$/;
 
 const enc = new TextEncoder();
@@ -62,14 +67,27 @@ export function parseCookies(header) {
   return out;
 }
 
-export function sessionCookie(token, { secure }) {
+/**
+ * The cookie domain for this request: the configured shared domain when the
+ * site is served under it (openings.garlick.ca, endgames.garlick.ca), or null
+ * (host-only) elsewhere, e.g. on workers.dev or localhost.
+ */
+export function cookieDomain(host, configured) {
+  const d = String(configured ?? '').replace(/^\./, '').toLowerCase();
+  const h = String(host ?? '').toLowerCase();
+  if (!d) return null;
+  return h === d || h.endsWith(`.${d}`) ? d : null;
+}
+
+export function sessionCookie(token, { secure, domain = null }) {
   const attrs = [`${COOKIE}=${token}`, 'Path=/', 'HttpOnly', 'SameSite=Lax', `Max-Age=${SESSION_DAYS * 86400}`];
+  if (domain) attrs.push(`Domain=${domain}`);
   if (secure) attrs.push('Secure');
   return attrs.join('; ');
 }
 
-export function clearCookie({ secure }) {
-  return `${COOKIE}=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0${secure ? '; Secure' : ''}`;
+export function clearCookie({ secure, domain = null, name = COOKIE }) {
+  return `${name}=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0${domain ? `; Domain=${domain}` : ''}${secure ? '; Secure' : ''}`;
 }
 
 // 8 failed logins for a username lock it for 5 minutes.

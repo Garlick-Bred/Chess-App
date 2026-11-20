@@ -101,8 +101,15 @@ grading), `shared/hints.js`, `shared/symmetry.js`, `client/src/game/useDrill.ts`
   curriculum that graduates items after 10 correct in a row, and an Elo-style
   rating. Background research is in `docs/RESEARCH.md`.
 
-## Open decision for a sibling site
+## One sign-in across sibling sites (decided)
 
-Separate accounts (own D1, cleanest) or shared family logins across
-`*.garlick.ca` (one users/sessions database, session cookie scoped to
-`.garlick.ca`). Decide before building the auth layer.
+Garlick Openings (`garlick-bred/chess-openings`) shares this site's accounts
+and sessions:
+* It binds this site's D1 database as `AUTH_DB`, reads `users` and writes new
+  accounts and `sessions` there.
+* Both Workers set `COOKIE_DOMAIN=garlick.ca`, so the `garlick_session` cookie
+  is sent to every *.garlick.ca site. Sign in once, and logging out anywhere
+  logs you out everywhere.
+* The old host-only `ge_session` cookie is still accepted and is upgraded to
+  the shared one on the next visit.
+* On other hosts (workers.dev, localhost) the cookie stays host-only.
