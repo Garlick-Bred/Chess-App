@@ -13,7 +13,13 @@
 // Levels 4-5 reuse the hardest positions with a tighter par time (speed mastery).
 // spm = seconds per move used to compute par time at each level.
 // targetRating = roughly the rating at which this drill is core learning;
-// well above it the drill is a warm-up (see shared/cloves.js).
+// well above it the drill is a warm-up (see shared/cloves.js). It is also the
+// drill's puzzle rating at level 2 (shared/rating.js). The baseline follows
+// Silman's Complete Endgame Course where it covers the drill (basic mates
+// under 1000; opposition 1000-1399; Lucena, Philidor and queen vs pawn
+// 1400-1599). Queen vs rook and bishop + knight sit at expert level (2000):
+// Silman leaves bishop + knight out entirely, and grandmasters still miss
+// queen vs rook. See docs/RESEARCH.md.
 
 /** @typedef {'mate'|'convert'|'promote'|'hold'} Goal */
 
@@ -128,7 +134,7 @@ export const DRILLS = [
   },
   {
     id: 'kqkp',
-    targetRating: 1300,
+    targetRating: 1450,
     name: 'Queen vs Pawn',
     material: 'King + queen vs king + pawn on the 7th',
     tier: 3,
@@ -209,7 +215,7 @@ export const DRILLS = [
   },
   {
     id: 'kqkr',
-    targetRating: 1800,
+    targetRating: 2000,
     name: 'Queen vs Rook',
     material: 'King + queen vs king + rook',
     tier: 4,
@@ -230,7 +236,7 @@ export const DRILLS = [
   },
   {
     id: 'kbnk',
-    targetRating: 1800,
+    targetRating: 2000,
     name: 'Bishop + Knight Mate',
     material: 'King + bishop + knight vs king',
     tier: 4,

@@ -9,9 +9,10 @@ describe('Endgame School curriculum', () => {
   it('starts a 1200 player on drills near their rating, skipping far-below ones', () => {
     const cur = buildCurriculum({ drills: DRILLS, progress: {}, rating: 1200, today });
     expect(cur.active).toHaveLength(ACTIVE_SIZE);
-    expect(ids(cur.active)).toContain('kqkp'); // target 1300, closest
+    // King + pawn (1000) is 200 below; the 1400 drills 200 above: easier ones first.
+    expect(ids(cur.active).slice(0, 2)).toEqual(['kpk-win', 'kpk-draw']);
     expect(ids(cur.placed)).toEqual(expect.arrayContaining(['krrk', 'kqk']));
-    // Bishop + knight (1800) is a stretch goal, last in line.
+    // Queen vs rook and bishop + knight (2000) are stretch goals, last in line.
     expect(ids(cur.upcoming).slice(-2)).toEqual(expect.arrayContaining(['kbnk', 'kqkr']));
   });
   it('puts drills you are struggling with first, even easy ones', () => {

@@ -120,6 +120,8 @@ zeroing move that keeps the win counts as progress.
 **Base points by difficulty:** Ladder 8 · Queen mate 10 · Rook mate 15 ·
 Escort the pawn 18 · Opposition defence 18 · Queen vs pawn 28 · Philidor 30 ·
 Two bishops 30 · Lucena 32 · Queen vs rook 45 · Bishop + knight 50.
+(Points use these fixed bases; the endgame rating uses each drill's target
+rating.)
 
 **Par time** = `5 s + seconds-per-move × moves to the goal × drill difficulty`.
 Seconds-per-move drops with level (e.g. rook mate: 4.5 → 2.5 s).
@@ -153,6 +155,8 @@ Seconds-per-move drops with level (e.g. rook mate: 4.5 → 2.5 s).
   Level 3 is worth 1.5x and the speed levels (4-5) 2x, capped at one clove, so
   getting fast at an easy mate still pays. A piece hint or takeback halves the
   value. A written hint costs points but not clove value.
+  At 1300, a full bulb takes about five drills at your level, or about thirteen
+  two-rook mates at level 3.
 * **Your level means your results, too:** a drill in your Endgame School
   rotation (or a due check-up) always fills a whole clove, even if the
   rating gap says "easy", and the ratings used are your endgame rating. A
@@ -161,8 +165,6 @@ Seconds-per-move drops with level (e.g. rook mate: 4.5 → 2.5 s).
 * **Lesson replays:** solving a puzzle again right after its lesson earns a
   **full clove** whatever the drill, at most twice a day. Replays don't count
   toward level-ups or personal bests.
-  At 1300, a full bulb takes about five drills at your level, or about thirteen
-  two-rook mates at level 3.
 * New players are placed by rating: warm-up drills start at level 3 and easy
   ones at level 2. Changing your rating re-places drills you haven't played yet.
 * The 5th clove completes the bulb: the stalks shoot up and wiggle, the bulb
@@ -230,7 +232,8 @@ An Elo-style rating on the chess rating scale (`shared/rating.js`).
 
 * **Puzzle rating** = the drill's target rating, -100 at level 1, +100 at
   level 3, +175 / +250 at the speed levels. (Rook mate 800, Lucena 1400,
-  bishop + knight 1800 at level 2.)
+  queen vs pawn 1450, queen vs rook and bishop + knight 2000 at level 2;
+  the baseline and its sources are in docs/RESEARCH.md.)
 * **Result:** fail 0; clean solve 1; with a written hint 0.75; with a piece
   hint or takeback 0.5; under 50% efficiency -0.25 (min 0.25 for any solve).
 * **Change** = K x (result - expected), expected = 1 / (1 + 10^((puzzle -

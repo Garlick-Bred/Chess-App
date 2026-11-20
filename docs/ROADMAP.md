@@ -36,8 +36,9 @@ Roughly in order of value for you:
 4. **The endgames you actually reach most** (rook + minor piece, queen +
    others) are too big for a tablebase. They need Stockfish (WebAssembly, in
    the browser) and a "play it out" mode. The next drill families to add are
-   pawn races and the square rule, triangulation, outside passed pawns, Vancura,
-   and a rook behind a passed pawn.
+   rook vs pawn and the square rule (both in Silman's 1400-1599 section),
+   pawn races, triangulation, outside passed pawns, Vancura, and a rook behind
+   a passed pawn.
 5. **Password resets.** There is no email, so an admin (you) needs a "reset
    password" button for family members.
 6. **Rating sync from chess.com.** If each person enters their chess.com
@@ -53,6 +54,7 @@ Roughly in order of value for you:
 
 | Decision | Current choice | Alternatives |
 |---|---|---|
+| Drill ratings | Baseline from research (Nov 2026): basic mates 400-800, K+P 1000, Lucena/Philidor/two bishops 1400, Q vs P 1450, Q vs R and B+N 2000 | Tune per drill once the family's results show where they really sit |
 | Clove values | Your level 1 · easy ½ · warm-up ¼; level 3 ×1.5, levels 4-5 ×2 (max 1); hint or takeback halves it | Stricter (warm-ups worth 0), or a daily cap on warm-up cloves |
 | "Your level" bands | Less than 200 below your rating = core; 200-499 below = easy; 500+ below = warm-up | Different bands, or per-drill tuning after the family has played |
 | Rating sources | Every source (chess.com rapid/blitz, FIDE, CFC, Lichess, guess) is taken at face value | Convert to one scale (chess.com and Lichess run higher than FIDE/CFC at club level) |

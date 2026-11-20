@@ -15,11 +15,11 @@ by rating band:
 
 | Band | What Silman puts there | In this app |
 |---|---|---|
-| Under 1000 | Beginners' section (contents not checked; standard practice is the basic mates) | Tier 1: Ladder, Queen mate, Rook mate |
-| Class E, 1000–1199 | Opposition, rook pawns ✔ | Tier 2: Escort the pawn, Opposition defence |
-| Class D, 1200–1399 | "Beyond basic opposition" (the magic rectangle), K+P vs lone king in depth ✔ | Tier 2 at higher levels; Queen vs pawn |
-| Class C, 1400–1599 | Pawn endings, minor pieces, **Lucena and Philidor** ✔ (per a reviewer) | Tier 3: Lucena, Philidor, Two bishops |
-| Higher bands | Not checked | Tier 4 stretch goals: Queen vs rook, Bishop + knight |
+| Under 1000 | "Overkill mates" (two queens, the staircase), "the box": K+Q and K+R vs lone king ✔ | Tier 1: Ladder (400), Queen mate (600), Rook mate (800) |
+| Class E, 1000–1199 | What can and cannot mate, opposition, rook pawns ✔ | Tier 2: Escort the pawn, Opposition defence (1000) |
+| Class D, 1200–1399 | "Beyond basic opposition" (the magic rectangle), K+P vs lone king in depth ✔ | Tier 2 at higher levels |
+| Class C, 1400–1599 | Pawn square, **Lucena and Philidor**, **queen vs pawn on the 6th/7th** (pp. 133–135) ✔ | Tier 3: Lucena, Philidor, Two bishops (1400), Queen vs pawn (1450) |
+| Higher bands | Bishop + knight mate is left out of the book entirely ✔ | Tier 4 stretch goals: Queen vs rook, Bishop + knight (2000) |
 
 ✔ = confirmed from the Library of Congress table of contents or published
 reviews. The rest is my placement, not Silman's.
@@ -33,6 +33,46 @@ appears in about **8.45%** of all games, according to Müller & Lamprecht's
 *Fundamental Chess Endings*. I saw that figure only second-hand. Your own games
 agree: rooks are on the board in most of your endgames (see the analysis
 report).
+
+### Baseline drill ratings (November 2026)
+
+Each drill's target rating is also its puzzle rating at level 2 for the
+endgame rating. After a second round of research the baseline was set to:
+
+| Drill | Rating | Why |
+|---|---|---|
+| Ladder / Queen / Rook mate | 400 / 600 / 800 | Silman's under-1000 section; every beginner guide starts here |
+| Escort the pawn, Opposition | 1000 | Silman: basic opposition 1000–1199, deeper K+P 1200–1399 |
+| Lucena, Philidor | 1400 | Silman: Class C (1400–1599). Coaching guides put them right after the basic mates and K+P for 800–1400 players, and note lower-rated players often throw away won Lucena positions |
+| Two bishops mate | 1400 | Rare and optional; the only rating advice found ("too advanced under ~1400") is one blog |
+| Queen vs pawn | 1450 (was 1300) | Silman places queen vs pawn on the 6th/7th in Class C (1400–1599) |
+| Queen vs rook | 2000 (was 1800) | Up to 31 moves of exact technique; grandmasters miss it (Nepomniachtchi couldn't beat Carlsen with it); appears in books aimed at 2000+ |
+| Bishop + knight | 2000 (was 1800) | About 1 game in 6,000; Silman omits it; opinions split (one teacher: learn by 1500; others: not worth it below IM) |
+
+What players say about difficulty by rating: around 1000–1200 the recurring
+complaint is the clock (falling apart under about two minutes), and the usual
+advice is to drill the basic mates until they're automatic. Lower-rated
+players also reach endgames less often (about 21% of Lichess games at 600 vs
+44% at 2800) and blunder more in them. Rook vs rook is the most common
+ending (about 8.5% of games; bishop vs knight 3.3%, queen vs queen 1.9%).
+
+Gaps the research points at: rook vs pawn, and the "square of the pawn"
+(both in Silman's Class C), which the app doesn't drill yet.
+
+Sources: [Silman contents (Library of Congress)](https://catdir.loc.gov/catdir/toc/ecip076/2006037884.html),
+[chess.com review](https://www.chess.com/news/view/endgames-are-fun),
+[Bishop and knight checkmate (Wikipedia)](https://en.wikipedia.org/wiki/Bishop_and_knight_checkmate),
+[Queen versus rook endgame (Wikipedia)](https://en.wikipedia.org/wiki/Queen_versus_rook_endgame),
+[the queen vs rook checkmate (chess.com blog)](https://www.chess.com/blog/JDchess121/the-queen-vs-rook-checkmate-the-hardest-in-the-game),
+[Queen versus pawn endgame (Wikipedia)](https://en.wikipedia.org/wiki/Queen_versus_pawn_endgame),
+[most often occurring endgames (TheChessWorld)](https://thechessworld.com/articles/endgame/chess-statistics-most-often-occuring-endgames-in-chess/),
+[Lichess rating guide (chessstats.gg)](https://chessstats.gg/stats/lichess-rating-guide),
+[two bishops mate (chess.com blog)](https://www.chess.com/blog/JDchess121/the-easiest-way-to-do-the-2-bishop-checkmate),
+[Lucena and Philidor (Archer Chess Academy)](https://archerchessacademy.com/blog/lucena-philidor-chess-endgames),
+[endgame study path](https://melvincarvalho.github.io/endgames/study-paths/overview),
+[1200 barrier (chess.com forum)](https://www.chess.com/forum/view/chess-lessons/unlocking-classical-chess-rare-insights-to-break-the-1200-elo-barrier?lc=1).
+Some pages were seen only through search excerpts (chess.com, archive.org and
+the Library of Congress were not reachable from the build environment).
 
 ## 2. What kind of practice works
 

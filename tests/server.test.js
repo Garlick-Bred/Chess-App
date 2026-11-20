@@ -173,15 +173,17 @@ describe('endgame rating and Endgame School', () => {
     expect(u.eg_rating).toBeGreaterThan(1200);
     expect((await getProgress(store, user.id)).philidor.cleanStreak).toBe(3);
   });
-  it('re-rates everyone once when the rules change (schema v5)', async () => {
+  it('re-rates everyone once when the rules change (schema v5, v6)', async () => {
     const { store, user } = await setup(1200);
     await store.run('UPDATE users SET eg_rating = 1500, eg_games = 9 WHERE id = ?', user.id);
     await store.run("UPDATE meta SET value = '4' WHERE key = 'schema_version'");
     await ensureSchema(store);
     const row = await store.get('SELECT eg_rating, eg_games FROM users WHERE id = ?', user.id);
     expect(row.eg_rating).toBe(null);
-    await ensureSchema(store); // already v5: no second reset
-    expect((await store.get("SELECT value FROM meta WHERE key = 'schema_version'")).value).toBe('5');
+    await store.run('UPDATE users SET eg_rating = 1500 WHERE id = ?', user.id);
+    await ensureSchema(store); // already current: no second reset
+    expect((await store.get('SELECT eg_rating FROM users WHERE id = ?', user.id)).eg_rating).toBe(1500);
+    expect((await store.get("SELECT value FROM meta WHERE key = 'schema_version'")).value).toBe('6');
   });
   it('shows endgame ratings on the family board', async () => {
     const { store, user } = await setup(1200);

@@ -96,7 +96,7 @@ export const SCHEMA = [
 ];
 
 /** Bump when SCHEMA or ADDED_COLUMNS change, so existing databases migrate. */
-export const SCHEMA_VERSION = 5;
+export const SCHEMA_VERSION = 6;
 
 // Columns added after the first release; added to older databases on start.
 export const ADDED_COLUMNS = [
@@ -126,6 +126,9 @@ export const ADDED_COLUMNS = [
  */
 export const DATA_MIGRATIONS = {
   5: ['UPDATE users SET eg_rating = NULL, eg_games = 0'],
+  // v6: new baseline drill ratings (queen vs pawn 1450, queen vs rook and
+  // bishop + knight 2000), so ratings are rebuilt against them.
+  6: ['UPDATE users SET eg_rating = NULL, eg_games = 0'],
 };
 
 /**
