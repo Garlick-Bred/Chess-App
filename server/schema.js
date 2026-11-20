@@ -96,7 +96,7 @@ export const SCHEMA = [
 ];
 
 /** Bump when SCHEMA or ADDED_COLUMNS change, so existing databases migrate. */
-export const SCHEMA_VERSION = 4;
+export const SCHEMA_VERSION = 5;
 
 // Columns added after the first release; added to older databases on start.
 export const ADDED_COLUMNS = [
@@ -119,13 +119,25 @@ export const ADDED_COLUMNS = [
 ];
 
 /**
+ * One-off data changes, run once when a database moves past that version.
+ * v5: the School and rating rules changed (10 solves to graduate, solves never
+ * lower the rating), so every player's rating and streaks are rebuilt from
+ * their history on their next visit.
+ */
+export const DATA_MIGRATIONS = {
+  5: ['UPDATE users SET eg_rating = NULL, eg_games = 0'],
+};
+
+/**
  * Create tables and add any missing columns. Costs a single query when the
  * database is already up to date (it runs on every cold start of a Worker).
  */
 export async function ensureSchema(store) {
+  let from = 0;
   try {
     const row = await store.get("SELECT value FROM meta WHERE key = 'schema_version'");
-    if (row && Number(row.value) >= SCHEMA_VERSION) return;
+    from = Number(row?.value ?? 0);
+    if (from >= SCHEMA_VERSION) return;
   } catch {
     // meta table missing: older or empty database
   }
@@ -133,6 +145,9 @@ export async function ensureSchema(store) {
   for (const [table, column, type] of ADDED_COLUMNS) {
     const cols = await store.all(`PRAGMA table_info(${table})`);
     if (!cols.some((c) => c.name === column)) await store.run(`ALTER TABLE ${table} ADD COLUMN ${column} ${type}`);
+  }
+  for (const [version, statements] of Object.entries(DATA_MIGRATIONS)) {
+    if (Number(version) > from) for (const sql of statements) await store.run(sql);
   }
   await store.run(
     "INSERT INTO meta (key, value) VALUES ('schema_version', ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value",

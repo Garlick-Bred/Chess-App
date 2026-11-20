@@ -118,6 +118,11 @@ describe('endgame rating and Endgame School', () => {
     expect(Math.round(row.eg_rating)).toBe(b.rating.after);
     expect(row.eg_games).toBe(2);
   });
+  it('a solve never lowers the rating, even with help on an easy puzzle', async () => {
+    const { store, user } = await setup(1200);
+    const r = await recordAttempt(store, user, solve({ drillId: 'kpk-win', mateIn: null, takebacks: 3 }));
+    expect(r.rating.delta).toBeGreaterThanOrEqual(0);
+  });
   it('lesson replays are unrated', async () => {
     const { store, user } = await setup(1200);
     const r = await recordAttempt(store, user, solve({ drillId: 'philidor', lessonReplay: true, mateIn: null }));
@@ -142,10 +147,13 @@ describe('endgame rating and Endgame School', () => {
     expect(r.cloveGain).toBe(0.5);
     expect(r.cloveNote).toMatch(/takeback/);
   });
-  it('graduates a drill after five clean solves in a row and schedules a check-up', async () => {
+  it('graduates a drill after ten solves in a row and schedules a check-up', async () => {
     const { store, user } = await setup(1200);
     let r;
-    for (let i = 0; i < 5; i++) r = await recordAttempt(store, user, solve({ drillId: 'kqkp', mateIn: 8, mode: 'school' }));
+    // Sloppy or takeback-assisted solves still count.
+    r = await recordAttempt(store, user, solve({ drillId: 'kqkp', mateIn: 8, mode: 'school', takebacks: 1, wastePlies: 12 }));
+    expect(r.school.cleanStreak).toBe(1);
+    for (let i = 0; i < 9; i++) r = await recordAttempt(store, user, solve({ drillId: 'kqkp', mateIn: 8, mode: 'school' }));
     expect(r.school.events.graduated).toBe(true);
     expect(r.school.reviewDue).toBe('2026-11-22');
     const p = (await getProgress(store, user.id)).kqkp;
@@ -164,6 +172,16 @@ describe('endgame rating and Endgame School', () => {
     expect(u.eg_games).toBe(3);
     expect(u.eg_rating).toBeGreaterThan(1200);
     expect((await getProgress(store, user.id)).philidor.cleanStreak).toBe(3);
+  });
+  it('re-rates everyone once when the rules change (schema v5)', async () => {
+    const { store, user } = await setup(1200);
+    await store.run('UPDATE users SET eg_rating = 1500, eg_games = 9 WHERE id = ?', user.id);
+    await store.run("UPDATE meta SET value = '4' WHERE key = 'schema_version'");
+    await ensureSchema(store);
+    const row = await store.get('SELECT eg_rating, eg_games FROM users WHERE id = ?', user.id);
+    expect(row.eg_rating).toBe(null);
+    await ensureSchema(store); // already v5: no second reset
+    expect((await store.get("SELECT value FROM meta WHERE key = 'schema_version'")).value).toBe('5');
   });
   it('shows endgame ratings on the family board', async () => {
     const { store, user } = await setup(1200);

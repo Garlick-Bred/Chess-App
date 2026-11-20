@@ -5,6 +5,7 @@
 // is "your level" material) adjusted for the drill level. Solving a puzzle
 // rated above you raises your rating a lot, one rated far below you barely or
 // not at all, and failing lowers it - by more when the puzzle was easy for you.
+// A solve never lowers it, even one that needed help.
 //
 // It starts at your chess rating and is gently pulled back toward it, so it
 // settles a few hundred points either side of your real rating depending on
@@ -65,6 +66,8 @@ export function rateAttempt({ rating, games, puzzle, score, anchor = null }) {
     delta = perf + ANCHOR_PULL * (anchor - rating);
     delta = perf > 0 ? Math.max(0, delta) : Math.min(0, delta);
   }
+  // Solving never costs rating; help just earns less.
+  if (score > 0) delta = Math.max(0, delta);
   delta = Math.round(delta);
   const after = Math.max(ENDGAME_RATING_MIN, Math.min(ENDGAME_RATING_MAX, rating + delta));
   return { before: rating, after, delta: after - rating, expected, puzzle };

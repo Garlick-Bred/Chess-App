@@ -4,9 +4,10 @@
 //   endgames of similar difficulty. Drills you are struggling with come
 //   first, then the ones closest to your endgame rating. Drills far above you
 //   (stretch) only come in once the ones below them are learned.
-// * Graduating: GRADUATE_AFTER clean solves in a row (no hints, no takebacks,
-//   no failure, efficient play) moves a drill out of the daily rotation, and
-//   the next one moves in.
+// * Graduating: GRADUATE_AFTER solves in a row without a failure moves a drill
+//   out of the daily rotation, and the next one moves in. Takebacks, written
+//   hints and slow play are fine; a solve that needed "Show piece" doesn't
+//   count (but doesn't reset the run either); a failed puzzle resets it.
 // * Check-ups: a graduated drill comes back after REVIEW_DAYS (3, 7, 14, 30,
 //   60 days), at most MAX_REVIEWS_PER_DAY a day. Passing pushes the next one
 //   further out; failing sends the drill back to "Now learning".
@@ -15,7 +16,7 @@
 import { addDays } from './scoring.js';
 
 export const ACTIVE_SIZE = 3;
-export const GRADUATE_AFTER = 5;
+export const GRADUATE_AFTER = 10;
 export const REVIEW_DAYS = [3, 7, 14, 30, 60];
 export const MAX_REVIEWS_PER_DAY = 2;
 /** Drills this far below your endgame rating are placed out. */
@@ -26,9 +27,12 @@ export const STRETCH_ABOVE = 350;
 export const STRUGGLE_RATE = 0.6;
 export const STRUGGLE_MIN_TRIES = 2;
 
-/** A clean solve: no failure, no help, and efficient play. */
-export function isClean({ success, hints = 0, writtenHints = 0, takebacks = 0, efficiency = 1, goal = 'mate' }) {
-  return !!success && hints === 0 && writtenHints === 0 && takebacks === 0 && (goal === 'hold' || efficiency >= 0.7);
+/**
+ * Does a solve count toward graduating? Any solve does, unless the piece to
+ * move had to be shown ("Show piece"). Failures are handled separately.
+ */
+export function countsForSchool({ success, hints = 0 }) {
+  return !!success && hints === 0;
 }
 
 /**
@@ -110,7 +114,7 @@ export function pickSchoolDrill(cur, { reviewsToday = 0, recent = [] } = {}) {
  * @returns {{ cleanStreak: number, status: string, reviewDue: string|null, reviewStep: number,
  *   events: { graduated?: boolean, reviewPassed?: boolean, recheck?: boolean, demoted?: boolean } }}
  */
-export function advanceSchool(prev, { success, clean }, today) {
+export function advanceSchool(prev, { success, counted }, today) {
   const s = {
     cleanStreak: prev?.cleanStreak ?? 0,
     status: prev?.status ?? 'learning',
@@ -122,7 +126,7 @@ export function advanceSchool(prev, { success, clean }, today) {
     if (!success) {
       Object.assign(s, { status: 'learning', cleanStreak: 0, reviewDue: null, reviewStep: 0 });
       events.demoted = true;
-    } else if (!clean) {
+    } else if (!counted) {
       s.reviewDue = addDays(today, 1);
       events.recheck = true;
     } else if (s.reviewDue && s.reviewDue <= today) {
@@ -130,14 +134,15 @@ export function advanceSchool(prev, { success, clean }, today) {
       s.reviewDue = addDays(today, REVIEW_DAYS[Math.min(s.reviewStep, REVIEW_DAYS.length - 1)]);
       events.reviewPassed = true;
     }
-  } else if (clean) {
+  } else if (!success) {
+    s.cleanStreak = 0;
+  } else if (counted) {
     s.cleanStreak += 1;
     if (s.cleanStreak >= GRADUATE_AFTER) {
       Object.assign(s, { status: 'graduated', reviewStep: 0, reviewDue: addDays(today, REVIEW_DAYS[0]) });
       events.graduated = true;
     }
-  } else {
-    s.cleanStreak = 0;
   }
+  // (a solve that needed "Show piece" leaves the run where it was)
   return { ...s, events };
 }

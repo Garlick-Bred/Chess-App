@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { DRILLS } from '../shared/drills.js';
-import { buildCurriculum, pickSchoolDrill, advanceSchool, isClean, atYourLevel, GRADUATE_AFTER, ACTIVE_SIZE } from '../shared/curriculum.js';
+import { buildCurriculum, pickSchoolDrill, advanceSchool, countsForSchool, atYourLevel, GRADUATE_AFTER, ACTIVE_SIZE } from '../shared/curriculum.js';
 
 const today = '2026-11-20';
 const ids = (list) => list.map((i) => i.id);
@@ -24,11 +24,16 @@ describe('Endgame School curriculum', () => {
     const cur = buildCurriculum({ drills: DRILLS, progress: { kbnk: { attempts: 5, solves: 0 } }, rating: 1200, today });
     expect(ids(cur.active)).not.toContain('kbnk');
   });
-  it('graduates after clean solves in a row, and a mistake resets the streak', () => {
-    let s = advanceSchool(undefined, { success: true, clean: true }, today);
-    s = advanceSchool(s, { success: true, clean: false }, today);
+  it('graduates after ten solves in a row; only a failure resets the run', () => {
+    expect(GRADUATE_AFTER).toBe(10);
+    let s = advanceSchool(undefined, { success: true, counted: true }, today);
+    s = advanceSchool(s, { success: true, counted: false }, today); // needed "Show piece": no change
+    expect(s.cleanStreak).toBe(1);
+    s = advanceSchool(s, { success: false, counted: false }, today);
     expect(s.cleanStreak).toBe(0);
-    for (let i = 0; i < GRADUATE_AFTER; i++) s = advanceSchool(s, { success: true, clean: true }, today);
+    for (let i = 0; i < GRADUATE_AFTER - 1; i++) s = advanceSchool(s, { success: true, counted: true }, today);
+    expect(s.status).toBe('learning');
+    s = advanceSchool(s, { success: true, counted: true }, today);
     expect(s.status).toBe('graduated');
     expect(s.events.graduated).toBe(true);
     expect(s.reviewDue).toBe('2026-11-23');
@@ -42,13 +47,13 @@ describe('Endgame School curriculum', () => {
   });
   it('check-ups: passing spaces them out, failing sends the drill back', () => {
     const grad = { status: 'graduated', reviewDue: today, reviewStep: 0, cleanStreak: 5 };
-    const pass = advanceSchool(grad, { success: true, clean: true }, today);
+    const pass = advanceSchool(grad, { success: true, counted: true }, today);
     expect(pass.events.reviewPassed).toBe(true);
     expect(pass.reviewDue).toBe('2026-11-27'); // 7 days
-    const shaky = advanceSchool(grad, { success: true, clean: false }, today);
+    const shaky = advanceSchool(grad, { success: true, counted: false }, today);
     expect(shaky.status).toBe('graduated');
     expect(shaky.reviewDue).toBe('2026-11-21');
-    const fail = advanceSchool(grad, { success: false, clean: false }, today);
+    const fail = advanceSchool(grad, { success: false, counted: false }, today);
     expect(fail.status).toBe('learning');
     expect(fail.events.demoted).toBe(true);
   });
@@ -63,10 +68,9 @@ describe('Endgame School curriculum', () => {
     expect(pickSchoolDrill(cur, { reviewsToday: 2, recent: [a[0]] }).drillId).toBe(a[1]);
     expect(pickSchoolDrill(cur, { reviewsToday: 2, recent: [a[0], a[1]] }).drillId).toBe(a[2]);
   });
-  it('clean means solved without help or sloppy play', () => {
-    expect(isClean({ success: true, efficiency: 0.9 })).toBe(true);
-    expect(isClean({ success: true, efficiency: 0.5 })).toBe(false);
-    expect(isClean({ success: true, takebacks: 1 })).toBe(false);
-    expect(isClean({ success: true, efficiency: 0.2, goal: 'hold' })).toBe(true);
+  it('any solve counts toward graduating unless the piece had to be shown', () => {
+    expect(countsForSchool({ success: true, efficiency: 0.4, takebacks: 2, writtenHints: 1 })).toBe(true);
+    expect(countsForSchool({ success: true, hints: 1 })).toBe(false);
+    expect(countsForSchool({ success: false })).toBe(false);
   });
 });

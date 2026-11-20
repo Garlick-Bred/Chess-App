@@ -210,12 +210,15 @@ level and moves you on once you've shown you know them.
   are "easy" for your rating; then the drills closest to your endgame rating.
   Stretch drills (350+ above you, e.g. bishop + knight at 1200) wait until
   the ones below them are learned.
-* **Graduating:** 5 clean solves in a row (no failure, hints or takebacks,
-  70%+ efficiency) graduate a drill: it leaves the rotation and the next one
-  moves in. Any attempt at the drill counts, not just School ones.
+* **Graduating:** 10 solves in a row without a failure graduate a drill: it
+  leaves the rotation and the next one moves in. Takebacks, written hints and
+  slow play are fine; a solve that needed "Show piece" doesn't count but
+  doesn't reset the run; a failed puzzle resets it. Any attempt at the drill
+  counts, not just School ones.
 * **Check-ups:** a graduated drill comes back after 3, 7, 14, 30 and 60 days,
-  at most 2 check-ups a day. A clean pass pushes the next one out; a solve
-  with help re-checks tomorrow; a failure sends it back to "Now learning".
+  at most 2 check-ups a day. A solve pushes the next one out; a solve that
+  needed "Show piece" re-checks tomorrow; a failure sends it back to "Now
+  learning".
 * **Placed out:** drills 500+ below your rating are skipped unless your
   results say otherwise.
 * Lesson replays don't count toward graduation.
@@ -232,13 +235,14 @@ An Elo-style rating on the chess rating scale (`shared/rating.js`).
   hint or takeback 0.5; under 50% efficiency -0.25 (min 0.25 for any solve).
 * **Change** = K x (result - expected), expected = 1 / (1 + 10^((puzzle -
   you) / 400)). K is 40 for your first 15 rated attempts, 28 up to 50, then
-  20. Solving a puzzle rated 400+ below you adds nothing.
+  20. Solving a puzzle rated 400+ below you adds nothing, and a solve never
+  lowers your rating (help just earns less).
 * **Anchor:** it starts at your chess rating and each rated attempt closes 3%
   of the gap back toward it (never turning a gain into a loss or the other
   way round), so it settles near your real strength, a couple of hundred
   points above or below depending on your endgames.
 * Lesson replays are unrated. Existing players were rated by replaying their
-  history: Mitch comes out at about 1190 against a 1200 chess.com rating.
+  history (and re-rated when these rules changed).
 
 ## 10. Variety from a fixed bank
 

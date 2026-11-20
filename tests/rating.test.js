@@ -41,6 +41,10 @@ describe('endgame rating', () => {
     const failBelow = rateAttempt({ rating: 900, games: 60, puzzle: 900, score: 0, anchor: 1200 });
     expect(failBelow.delta).toBeLessThanOrEqual(0);
   });
+  it('never lowers the rating for a solve', () => {
+    // A solve with a takeback (half credit) of a puzzle you were expected to solve.
+    expect(rateAttempt({ rating: 1300, games: 30, puzzle: 1000, score: 0.5, anchor: 1200 }).delta).toBe(0);
+  });
   it('moves faster while the rating is new', () => {
     expect(kFactor(0)).toBeGreaterThan(kFactor(100));
     expect(expectedScore(1200, 1200)).toBeCloseTo(0.5);

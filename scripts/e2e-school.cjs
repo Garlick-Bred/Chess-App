@@ -100,8 +100,10 @@ async function postAttempts(page, list) {
     await page.waitForTimeout(400);
   }
 
-  // Graduation: four clean solves via the API, the fifth on the board.
-  await postAttempts(page, Array.from({ length: 4 }, () => ({ d: 'kpk-win', l: 2, s: 1, h: 0, w: 0, t: 0, e: 1 })));
+  // Graduation: solves via the API up to one short of the target, the last on the board.
+  const me = await page.evaluate(async () => (await fetch('/api/me')).json());
+  const toGo = 10 - 1 - me.progress['kpk-win'].cleanStreak;
+  await postAttempts(page, Array.from({ length: toGo }, () => ({ d: 'kpk-win', l: 2, s: 1, h: 0, w: 0, t: 0, e: 1 })));
   await page.goto(`${BASE}/#/play/kpk-win`);
   await page.reload();
   await page.waitForSelector('.board.interactive', { timeout: 30000 });

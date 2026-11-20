@@ -19,7 +19,7 @@ function niceDay(day: string | null): string {
 
 export function StreakDots({ n, of = GRADUATE_AFTER }: { n: number; of?: number }) {
   return (
-    <span className="streak-dots" title={`${n} of ${of} clean solves in a row`} aria-label={`${n} of ${of} clean solves in a row`}>
+    <span className="streak-dots" title={`${n} of ${of} solves in a row`} aria-label={`${n} of ${of} solves in a row`}>
       {Array.from({ length: of }, (_, i) => (
         <i key={i} className={i < n ? 'on' : ''} />
       ))}
@@ -33,7 +33,7 @@ function Row({ item, kind }: { item: Item; kind: 'active' | 'due' | 'upcoming' |
   if (kind === 'active') {
     detail = (
       <>
-        <StreakDots n={item.cleanStreak} /> {item.cleanStreak}/{GRADUATE_AFTER} clean in a row
+        <StreakDots n={item.cleanStreak} /> {item.cleanStreak}/{GRADUATE_AFTER} in a row
         {item.attempts > 0 && (
           <span className="muted school-rate">
             solved {Math.round((item.rate ?? 0) * 100)}% of {item.attempts}
@@ -123,8 +123,8 @@ export default function SchoolPage() {
           <div className="eyebrow">🎓 Endgame School</div>
           <h1>Endgames at your level</h1>
           <p className="muted">
-            You rotate between {ACTIVE_SIZE} endgames close to your rating, starting with the ones you find hardest. {GRADUATE_AFTER} clean solves in a
-            row graduates one and a harder endgame moves in. Graduated endgames come back for check-ups after {REVIEW_DAYS.slice(0, 3).join(', ')}{' '}
+            You rotate between {ACTIVE_SIZE} endgames close to your rating, starting with the ones you find hardest. {GRADUATE_AFTER} solves in a row
+            without a failure graduates one and a harder endgame moves in (takebacks and hints are fine; only "Show piece" solves don't count). Graduated endgames come back for check-ups after {REVIEW_DAYS.slice(0, 3).join(', ')}{' '}
             and {REVIEW_DAYS[3]} days.
           </p>
           <button className="btn primary big" onClick={() => go('/play/school')}>
@@ -207,8 +207,8 @@ export default function SchoolPage() {
 
       <section className="card small muted">
         <b>Endgame rating</b> works like a chess rating. Each puzzle has a rating (harder drills and higher levels rate higher). Solving one rated
-        above you raises yours a lot; one far below you adds nothing. Failing lowers it, by more when the puzzle should have been easy. Help
-        (hints, takebacks) counts as a partial solve. It started at your chess rating and is gently pulled back toward it, so it shows how your
+        above you raises yours a lot; one far below you adds nothing. Failing lowers it, by more when the puzzle should have been easy. A solve
+        never lowers it; one with help (hints, takebacks) just earns less. It started at your chess rating and is gently pulled back toward it, so it shows how your
         endgames compare with the rest of your game.
       </section>
     </div>

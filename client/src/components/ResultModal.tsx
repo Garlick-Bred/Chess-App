@@ -42,14 +42,14 @@ function RatingAndSchool({ result, drill }: { result: AttemptResult; drill: any 
   } else if (r.rated && sc && sc.status === 'learning' && (sc.mode || sc.atLevel)) {
     school = (
       <div className="school-note">
-        <span className="streak-dots" aria-label={`${sc.cleanStreak} of ${sc.needed} clean solves in a row`}>
+        <span className="streak-dots" aria-label={`${sc.cleanStreak} of ${sc.needed} solves in a row`}>
           {Array.from({ length: sc.needed }, (_, i) => (
             <i key={i} className={i < sc.cleanStreak ? 'on' : ''} />
           ))}
         </span>{' '}
         {sc.cleanStreak === 0
-          ? `Clean solves in a row: 0/${sc.needed}. A clean solve has no help, no takebacks and efficient play.`
-          : `${sc.cleanStreak}/${sc.needed} clean solves in a row to graduate ${drill.name}.`}
+          ? `Solves in a row: 0/${sc.needed}. Any solve counts (unless you used Show piece); a failed puzzle starts the run again.`
+          : `${sc.cleanStreak}/${sc.needed} solves in a row to graduate ${drill.name}.`}
       </div>
     );
   }

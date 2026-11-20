@@ -6,7 +6,7 @@ import { DRILLS, DRILL_BY_ID, MAX_LEVEL, parSeconds } from '../shared/drills.js'
 import { scoreAttempt, qualifiesForLevel, SOLVES_TO_LEVEL, BULB_CLOVES, BULB_BONUS, PB_BONUS_SHARE, bulbStreak, rankFor, masteryStars, addDays } from '../shared/scoring.js';
 import { cloveValue, cloveShortfall, startingLevel, LESSON_CLOVES_PER_DAY } from '../shared/cloves.js';
 import { puzzleRating, solveScore, rateAttempt, startingEndgameRating } from '../shared/rating.js';
-import { buildCurriculum, atYourLevel, advanceSchool, isClean, GRADUATE_AFTER } from '../shared/curriculum.js';
+import { buildCurriculum, atYourLevel, advanceSchool, countsForSchool, GRADUATE_AFTER } from '../shared/curriculum.js';
 import { ACHIEVEMENTS, newlyUnlocked } from '../shared/achievements.js';
 import { GRADES } from '../shared/grading.js';
 
@@ -132,7 +132,7 @@ export async function ensureEndgameRating(store, user) {
     writes.push(['UPDATE attempts SET eg_before = ?, eg_after = ?, puzzle_rating = ? WHERE id = ?', [res.before, res.after, puzzle, r.id]]);
     rating = res.after;
     games++;
-    school[r.drill_id] = advanceSchool(school[r.drill_id], { success: a.success, clean: isClean(a) }, r.day);
+    school[r.drill_id] = advanceSchool(school[r.drill_id], { success: a.success, counted: countsForSchool(a) }, r.day);
   }
   for (const [drillId, st] of Object.entries(school)) {
     writes.push([
@@ -239,7 +239,7 @@ export async function recordAttempt(store, user, body) {
   const school = rated
     ? advanceSchool(
         { cleanStreak: progressRow.clean_streak, status: progressRow.status, reviewDue: progressRow.review_due, reviewStep: progressRow.review_step },
-        { success, clean: isClean(quality) },
+        { success, counted: countsForSchool(quality) },
         day,
       )
     : { cleanStreak: progressRow.clean_streak ?? 0, status: progressRow.status ?? 'learning', reviewDue: progressRow.review_due, reviewStep: progressRow.review_step ?? 0, events: {} };

@@ -27,11 +27,12 @@ solve.
   glows, legal moves show as dots and rings, the computer's moves slide in, and
   there's a promotion picker.
 * **Endgame School** (the main button on Home): rotates between three
-  endgames at your level, hardest-for-you first. Five clean solves in a row
-  graduate one and a harder endgame moves in; graduated ones come back for
-  spaced check-ups.
+  endgames at your level, hardest-for-you first. Ten solves in a row without
+  a failure graduate one and a harder endgame moves in; graduated ones come
+  back for spaced check-ups.
 * **Endgame rating:** an Elo-style rating on the chess scale. Hard puzzles
-  raise it more, very easy ones not at all, failures lower it. It starts at,
+  raise it more, very easy ones not at all, failures lower it (solves never
+  do). It starts at,
   and is gently anchored to, your chess rating. Shown on Home, the result
   screen, the School page and the family board.
 * **Premoves:** queue your next move while the computer is replying.
