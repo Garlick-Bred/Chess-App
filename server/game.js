@@ -16,16 +16,15 @@ const EPS = 1e-9;
 const int = (v, lo, hi) => Math.max(lo, Math.min(hi, Math.round(Number(v) || 0)));
 
 export async function getProgress(store, userId) {
-  const rows = await store.all(
-    'SELECT drill_id, level, qualifying, clean_streak, status, review_due, review_step FROM progress WHERE user_id = ?',
-    userId,
-  );
-  const solves = await store.all(
+  const [rows, solves] = await Promise.all([
+    store.all('SELECT drill_id, level, qualifying, clean_streak, status, review_due, review_step FROM progress WHERE user_id = ?', userId),
+    store.all(
     `SELECT drill_id, MIN(CASE WHEN success THEN duration_ms * 1.0 / MAX(user_moves, 1) END) best_spm,
             MIN(CASE WHEN success THEN duration_ms END) best_ms, COUNT(*) attempts, SUM(success) solves
      FROM attempts WHERE user_id = ? GROUP BY drill_id`,
     userId,
-  );
+    ),
+  ]);
   const byId = Object.fromEntries(rows.map((r) => [r.drill_id, r]));
   const sById = Object.fromEntries(solves.map((r) => [r.drill_id, r]));
   const out = {};
@@ -73,19 +72,25 @@ export async function applyStartingLevels(store, userId, rating) {
 }
 
 export async function getTotals(store, userId, today) {
-  const a = await store.get(
-    `SELECT COALESCE(SUM(points),0) pts, COALESCE(SUM(success),0) solves, COALESCE(SUM(perfect),0) perfects,
-            COALESCE(SUM(CASE WHEN success AND speed_factor >= 0.999 THEN 1 ELSE 0 END),0) speed_max
-     FROM attempts WHERE user_id = ?`,
-    userId,
-  );
-  const b = await store.get('SELECT COALESCE(SUM(bonus),0) bonus, COALESCE(SUM(bulb_done),0) bulbs FROM days WHERE user_id = ?', userId);
-  const { doneDays, protectedDays, shieldDays } = await streakDays(store, userId);
-  const u = (await store.get('SELECT shields, braid FROM users WHERE id = ?', userId)) ?? { shields: 0, braid: 0 };
-  const g = await store.get('SELECT COALESCE(SUM(golden),0) n FROM attempts WHERE user_id = ?', userId);
+  // Independent reads run in parallel (each is a network round trip on D1).
+  const [a, b, sd, u0, progress] = await Promise.all([
+    store.get(
+      `SELECT COALESCE(SUM(points),0) pts, COALESCE(SUM(success),0) solves, COALESCE(SUM(perfect),0) perfects,
+              COALESCE(SUM(CASE WHEN success AND speed_factor >= 0.999 THEN 1 ELSE 0 END),0) speed_max,
+              COALESCE(SUM(golden),0) golden
+       FROM attempts WHERE user_id = ?`,
+      userId,
+    ),
+    store.get('SELECT COALESCE(SUM(bonus),0) bonus, COALESCE(SUM(bulb_done),0) bulbs FROM days WHERE user_id = ?', userId),
+    streakDays(store, userId),
+    store.get('SELECT shields, braid FROM users WHERE id = ?', userId),
+    getProgress(store, userId),
+  ]);
+  const { doneDays, protectedDays, shieldDays } = sd;
+  const u = u0 ?? { shields: 0, braid: 0 };
+  const g = { n: a.golden };
   const streak = today ? streakInfo({ doneDays, protectedDays, today, shields: u.shields }) : { streak: 0, repairable: null };
   const recentShield = today ? shieldDays.filter((d) => d >= addDays(today, -3)).sort().pop() ?? null : null;
-  const progress = await getProgress(store, userId);
   const solvesByDrill = {};
   const levelByDrill = {};
   for (const [id, p] of Object.entries(progress)) {
@@ -148,8 +153,10 @@ export async function applyShields(store, userId, today) {
 }
 
 export async function getDay(store, userId, day) {
-  const row = await store.get('SELECT cloves, bulb_done, bonus FROM days WHERE user_id = ? AND day = ?', userId, day);
-  const rev = await store.get("SELECT COUNT(*) n FROM attempts WHERE user_id = ? AND day = ? AND mode = 'review'", userId, day);
+  const [row, rev] = await Promise.all([
+    store.get('SELECT cloves, bulb_done, bonus FROM days WHERE user_id = ? AND day = ?', userId, day),
+    store.get("SELECT COUNT(*) n FROM attempts WHERE user_id = ? AND day = ? AND mode = 'review'", userId, day),
+  ]);
   return { day, cloves: row?.cloves ?? 0, bulbDone: !!row?.bulb_done, bonus: row?.bonus ?? 0, size: BULB_CLOVES, reviews: rev?.n ?? 0 };
 }
 
@@ -202,11 +209,25 @@ export async function recordAttempt(store, user, body, opts = {}) {
   const day = DAY_RE.test(body.day ?? '') ? body.day : new Date().toISOString().slice(0, 10);
   user = await ensureEndgameRating(store, user);
   await applyShields(store, user.id, day);
-  const progressRow = (await store.get(
-    'SELECT level, qualifying, clean_streak, status, review_due, review_step FROM progress WHERE user_id = ? AND drill_id = ?',
-    user.id,
-    drill.id,
-  )) ?? { level: 1, qualifying: 0, clean_streak: 0, status: null, review_due: null, review_step: 0 };
+  // Everything this attempt needs to read, fetched in parallel (each read is a
+  // network round trip on D1).
+  const [progressRow0, pbPrev, progressBefore, dayRow0, urow0, alreadyRows] = await Promise.all([
+    store.get(
+      'SELECT level, qualifying, clean_streak, status, review_due, review_step FROM progress WHERE user_id = ? AND drill_id = ?',
+      user.id,
+      drill.id,
+    ),
+    store.get(
+      'SELECT COUNT(*) n, MIN(duration_ms * 1.0 / MAX(user_moves,1)) best FROM attempts WHERE user_id = ? AND drill_id = ? AND success = 1',
+      user.id,
+      drill.id,
+    ),
+    getProgress(store, user.id),
+    store.get('SELECT cloves, bulb_done, bonus FROM days WHERE user_id = ? AND day = ?', user.id, day),
+    store.get('SELECT shields, braid, golden_since FROM users WHERE id = ?', user.id),
+    store.all('SELECT achievement_id FROM achievements WHERE user_id = ?', user.id),
+  ]);
+  const progressRow = progressRow0 ?? { level: 1, qualifying: 0, clean_streak: 0, status: null, review_due: null, review_step: 0 };
   const level = int(body.level, 1, Math.min(MAX_LEVEL, progressRow.level));
   const puzzle = { mateIn: body.mateIn != null ? int(body.mateIn, 1, 60) : null };
   const par = parSeconds(drill, puzzle, level);
@@ -240,11 +261,7 @@ export async function recordAttempt(store, user, body, opts = {}) {
   // A replay right after a lesson doesn't count: the answer was just shown.
   let pb = false;
   if (success && userMoves > 0 && !attempt.lessonReplay) {
-    const prev = await store.get(
-      'SELECT COUNT(*) n, MIN(duration_ms * 1.0 / MAX(user_moves,1)) best FROM attempts WHERE user_id = ? AND drill_id = ? AND success = 1',
-      user.id,
-      drill.id,
-    );
+    const prev = pbPrev;
     const spm = attempt.durationMs / userMoves;
     if (prev.n >= 3 && spm < prev.best) {
       pb = true;
@@ -272,7 +289,7 @@ export async function recordAttempt(store, user, body, opts = {}) {
   // Endgame School: where this drill stands before the attempt. Drills in
   // your rotation (and due check-ups) are "your level".
   const egBefore = user.eg_rating;
-  const curriculum = buildCurriculum({ drills: DRILLS, progress: await getProgress(store, user.id), rating: egBefore, today: day });
+  const curriculum = buildCurriculum({ drills: DRILLS, progress: progressBefore, rating: egBefore, today: day });
   const atLevel = atYourLevel(curriculum, drill.id);
 
   // Endgame rating (lesson replays are unrated: the answer was just shown).
@@ -307,17 +324,13 @@ export async function recordAttempt(store, user, body, opts = {}) {
       lessonCloveCapped = true;
     }
   }
-  const dayRow = (await store.get('SELECT cloves, bulb_done, bonus FROM days WHERE user_id = ? AND day = ?', user.id, day)) ?? {
-    cloves: 0,
-    bulb_done: 0,
-    bonus: 0,
-  };
+  const dayRow = dayRow0 ?? { cloves: 0, bulb_done: 0, bonus: 0 };
   const cloves = dayRow.cloves + cloveGain;
   const bulbCompletedNow = !dayRow.bulb_done && cloves >= BULB_CLOVES - EPS;
 
   // Streak protection: cloves beyond the full bulb weave the braid (a shield
   // every BRAID_SIZE), and a double bulb repairs a streak broken yesterday.
-  const urow = (await store.get('SELECT shields, braid, golden_since FROM users WHERE id = ?', user.id)) ?? { shields: 0, braid: 0, golden_since: 0 };
+  const urow = urow0 ?? { shields: 0, braid: 0, golden_since: 0 };
   const woven = weaveBraid({ braid: urow.braid, shields: urow.shields, cloveBefore: dayRow.cloves, cloveAfter: cloves });
   let repaired = null;
   if (cloves >= REPAIR_CLOVES - EPS && dayRow.cloves < REPAIR_CLOVES - EPS) {
@@ -337,7 +350,7 @@ export async function recordAttempt(store, user, body, opts = {}) {
     points += goldenPoints;
   }
   const goldenSince = !goldenEligible ? (urow.golden_since ?? 0) : golden ? 0 : (urow.golden_since ?? 0) + 1;
-  const already = (await store.all('SELECT achievement_id FROM achievements WHERE user_id = ?', user.id)).map((r) => r.achievement_id);
+  const already = alreadyRows.map((r) => r.achievement_id);
 
   const writes = [
     [
@@ -402,7 +415,7 @@ export async function recordAttempt(store, user, body, opts = {}) {
   }
   await store.batch(writes);
 
-  const totals = await getTotals(store, user.id, day);
+  const [totals, dayAfter] = await Promise.all([getTotals(store, user.id, day), getDay(store, user.id, day)]);
   const ctx = {
     attempt: { drillId: drill.id, success, durationMs: attempt.durationMs, efficiency: score.efficiency, perfect: score.perfect, level, takebacks: attempt.takebacks },
     totals,
@@ -438,7 +451,7 @@ export async function recordAttempt(store, user, body, opts = {}) {
       events: school.events,
     },
     progress: { level: newLevel, qualifying, levelUp, needed: SOLVES_TO_LEVEL, qualified: qualifies },
-    day: { ...(await getDay(store, user.id, day)), bulbCompletedNow, bulbBonus: bulbCompletedNow ? BULB_BONUS : 0 },
+    day: { ...dayAfter, bulbCompletedNow, bulbBonus: bulbCompletedNow ? BULB_BONUS : 0 },
     newAchievements: unlocked.map((id) => publicAchievement(ACHIEVEMENTS.find((a) => a.id === id))),
     totals: { points: totals.points, rank: totals.rank, streak: totals.streak, shields: totals.shields },
   };

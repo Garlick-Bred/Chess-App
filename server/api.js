@@ -151,12 +151,8 @@ export function createApi({ store, env = {} }) {
     if (method === 'GET' && path === '/api/me') {
       const u = await needUser();
       await applyShields(store, u.id, day);
-      return json({
-        user: publicUser(u),
-        totals: await getTotals(store, u.id, day),
-        today: await getDay(store, u.id, day),
-        progress: await getProgress(store, u.id),
-      });
+      const [totals, today, progress] = await Promise.all([getTotals(store, u.id, day), getDay(store, u.id, day), getProgress(store, u.id)]);
+      return json({ user: publicUser(u), totals, today, progress });
     }
 
     if (method === 'PUT' && path === '/api/me') {
