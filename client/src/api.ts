@@ -69,6 +69,10 @@ export interface WorldInfo {
   tagline: string;
   bg: [string, string];
   accent: string;
+  /** Light and dark board squares for the world's map. */
+  board: [string, string];
+  /** 'garlic' (drawn bulb) or an emoji. */
+  landmark: string;
   deco: string[];
 }
 

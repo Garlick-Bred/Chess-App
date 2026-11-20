@@ -146,8 +146,13 @@ Seconds-per-move drops with level (e.g. rook mate: 4.5 → 2.5 s).
   🏰 Rook Towers, ⛪ Bishop's Cathedral, 🌲 Knight's Forest, 👑 Queen's Palace,
   🏔️ Grandmaster Summit, then endless 🌟 Legend worlds. World 2 starts at 900
   points, World 7 ends at about 27,000 (roughly 3-4 months of daily bulbs).
-  The result screen shows the bar moving and celebrates new stages and
-  worlds; the header shows your stage. The path is separate from the endgame
+  The Path page is an isometric board per world (each with its own
+  colours and a landmark: a garlic bulb, a village, a castle, a cathedral,
+  a forest, a crown, a summit), raised tiles for the stages climbing upward
+  (green with a tick when done, frosted with the stage number ahead), your
+  pawn and avatar on the current tile, and a bottom panel with points,
+  streak, progress and "Start School". The result screen shows the bar
+  moving and celebrates new stages and worlds; the header shows your stage. The path is separate from the endgame
   rating: points reward effort and consistency, the rating measures skill.
 
 ## 6. The daily Garlick bulb

@@ -15,17 +15,17 @@ export function stageCost(i) {
 }
 
 export const WORLDS = [
-  { name: 'Garlic Patch', icon: '🌱', tagline: 'Where every clove begins', bg: ['#2f4a22', '#1a2614'], accent: '#95c95e', deco: ['🌱', '🧄', '🌿', '🐌'] },
-  { name: 'Pawn Village', icon: '🏘️', tagline: 'Little steps, big promotions', bg: ['#5a3b22', '#2a1c12'], accent: '#f0a35a', deco: ['♟️', '🏠', '🧺', '🐓'] },
-  { name: 'Rook Towers', icon: '🏰', tagline: 'Cut them off, close the box', bg: ['#3b4654', '#1c222a'], accent: '#9fc3e8', deco: ['♜', '🧱', '🦅', '⚔️'] },
-  { name: "Bishop's Cathedral", icon: '⛪', tagline: 'Long diagonals, quiet power', bg: ['#4a2f5e', '#1f1529'], accent: '#c9a2f2', deco: ['♝', '🕯️', '🔔', '📜'] },
-  { name: "Knight's Forest", icon: '🌲', tagline: 'Hop, fork and find the way', bg: ['#1f4a43', '#0d201d'], accent: '#5fd0b5', deco: ['♞', '🌲', '🦉', '🍄'] },
-  { name: "Queen's Palace", icon: '👑', tagline: 'Power with precision', bg: ['#5e2230', '#260d14'], accent: '#f7c631', deco: ['♛', '💎', '🏺', '🌹'] },
-  { name: 'Grandmaster Summit', icon: '🏔️', tagline: 'The view from the top', bg: ['#2c4a66', '#111b26'], accent: '#bfe3ff', deco: ['🏔️', '❄️', '🦅', '⭐'] },
+  { name: 'Garlic Patch', icon: '🌱', tagline: 'Where every clove begins', bg: ['#2f4a22', '#1a2614'], accent: '#95c95e', board: ['#8fb565', '#7aa152'], landmark: 'garlic', deco: ['🌱', '🧄', '🌿', '🐌'] },
+  { name: 'Pawn Village', icon: '🏘️', tagline: 'Little steps, big promotions', bg: ['#5a3b22', '#2a1c12'], accent: '#f0a35a', board: ['#d2a878', '#bf9264'], landmark: '🏘️', deco: ['♟️', '🏠', '🧺', '🐓'] },
+  { name: 'Rook Towers', icon: '🏰', tagline: 'Cut them off, close the box', bg: ['#3b4654', '#1c222a'], accent: '#9fc3e8', board: ['#a9b2bd', '#959fab'], landmark: '🏰', deco: ['♜', '🧱', '🦅', '⚔️'] },
+  { name: "Bishop's Cathedral", icon: '⛪', tagline: 'Long diagonals, quiet power', bg: ['#4a2f5e', '#1f1529'], accent: '#c9a2f2', board: ['#b29ad0', '#9d84bd'], landmark: '⛪', deco: ['♝', '🕯️', '🔔', '📜'] },
+  { name: "Knight's Forest", icon: '🌲', tagline: 'Hop, fork and find the way', bg: ['#1f4a43', '#0d201d'], accent: '#5fd0b5', board: ['#6aa58d', '#58937b'], landmark: '🌲', deco: ['♞', '🌲', '🦉', '🍄'] },
+  { name: "Queen's Palace", icon: '👑', tagline: 'Power with precision', bg: ['#5e2230', '#260d14'], accent: '#f7c631', board: ['#d08a8f', '#bd7479'], landmark: '👑', deco: ['♛', '💎', '🏺', '🌹'] },
+  { name: 'Grandmaster Summit', icon: '🏔️', tagline: 'The view from the top', bg: ['#2c4a66', '#111b26'], accent: '#bfe3ff', board: ['#c3d8ec', '#adc6df'], landmark: '🏔️', deco: ['🏔️', '❄️', '🦅', '⭐'] },
 ];
 
 /** Worlds after the seventh: endless Legend worlds. */
-export const LEGEND = { name: 'Legend', icon: '🌟', tagline: 'Beyond the summit', bg: ['#3a3020', '#14100a'], accent: '#ffd76a', deco: ['🌟', '✨', '🏆', '🧄'] };
+export const LEGEND = { name: 'Legend', icon: '🌟', tagline: 'Beyond the summit', bg: ['#3a3020', '#14100a'], accent: '#ffd76a', board: ['#cfb25c', '#b99c48'], landmark: '🏆', deco: ['🌟', '✨', '🏆', '🧄'] };
 
 export function worldInfo(world) {
   if (world <= WORLDS.length) return { ...WORLDS[world - 1], number: world };

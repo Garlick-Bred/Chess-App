@@ -65,7 +65,7 @@ const text = async (page, sel) => ((await page.$(sel)) ? (await page.textContent
   await (await page.$('.path-card')).screenshot({ path: `${OUT}/01-path-card.png` });
 
   await page.goto(`${BASE}/#/path`);
-  await page.waitForSelector('.node.here');
+  await page.waitForSelector('.iso-stage.here');
   await page.waitForTimeout(400);
   await page.screenshot({ path: `${OUT}/02-path-map-phone.png` });
 
@@ -84,7 +84,7 @@ const text = async (page, sel) => ((await page.$(sel)) ? (await page.textContent
   const p2 = await desk.newPage();
   p2.on('pageerror', (e) => errors.push(`desk pageerror: ${e.message}`));
   await p2.goto(`${BASE}/#/path`);
-  await p2.waitForSelector('.node.here');
+  await p2.waitForSelector('.iso-stage.here');
   await p2.waitForTimeout(400);
   await p2.screenshot({ path: `${OUT}/04-path-map-desktop.png` });
   await p2.goto(`${BASE}/#/family`);

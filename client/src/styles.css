@@ -2772,3 +2772,320 @@ button.card:hover {
   margin-left: auto;
   margin-right: auto;
 }
+
+/* ---------- the Garlick Path: isometric map ---------- */
+.page-path main {
+  padding: 0 0 calc(84px + env(safe-area-inset-bottom));
+  max-width: none;
+}
+.path-screen {
+  position: relative;
+  max-width: 640px;
+  margin: 0 auto;
+}
+.path-info-btn {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 30;
+  border: 0;
+  border-radius: 14px;
+  padding: 6px 12px;
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 800;
+  color: #fff;
+  background: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(4px);
+  cursor: pointer;
+}
+.iso-map {
+  display: flex;
+  flex-direction: column;
+}
+.iso-world {
+  position: relative;
+  overflow: hidden;
+}
+.iso-board {
+  position: absolute;
+  left: -60%;
+  top: -60%;
+  width: 220%;
+  height: 220%;
+  background: repeating-conic-gradient(var(--b1) 0 25%, var(--b2) 0 50%) 0 0 / 88px 88px;
+  transform: rotateX(58deg) rotateZ(45deg);
+}
+.iso-shade {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse at 50% 50%, transparent 55%, rgba(0, 0, 0, 0.28)),
+    linear-gradient(180deg, rgba(0, 0, 0, 0.18), transparent 14%, transparent 86%, rgba(0, 0, 0, 0.22));
+  pointer-events: none;
+}
+.iso-world.locked .iso-board,
+.iso-world.locked .landmark,
+.iso-world.locked .iso-deco {
+  filter: grayscale(0.65) brightness(0.8);
+}
+.iso-stage {
+  position: absolute;
+  width: 104px;
+  transform: translateX(-50%);
+}
+.tile {
+  display: block;
+  width: 104px;
+  height: 78px;
+}
+.iso-stage.here .tile {
+  filter: drop-shadow(0 0 10px rgba(255, 255, 255, 0.75));
+}
+.iso-stage.done .tile {
+  filter: drop-shadow(0 2px 0 rgba(0, 0, 0, 0.15));
+}
+.token {
+  position: absolute;
+  left: 50%;
+  bottom: 30px;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  pointer-events: none;
+  animation: token-bob 2s ease-in-out infinite;
+}
+.token-avatar {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  border: 3px solid #fff;
+  display: grid;
+  place-items: center;
+  font-size: 1.5rem;
+  margin-bottom: -2px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.35);
+}
+.token-piece {
+  width: 58px;
+  height: 58px;
+  filter: drop-shadow(0 5px 4px rgba(0, 0, 0, 0.45));
+}
+@keyframes token-bob {
+  50% {
+    transform: translate(-50%, -5px);
+  }
+}
+.stage-need {
+  position: absolute;
+  top: 82%;
+  left: 50%;
+  transform: translateX(-50%);
+  white-space: nowrap;
+  font-size: 0.72rem;
+  font-weight: 800;
+  color: #fff;
+  background: rgba(0, 0, 0, 0.45);
+  padding: 1px 8px;
+  border-radius: 10px;
+}
+.landmark {
+  position: absolute;
+  top: 30%;
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+}
+.landmark.left {
+  left: 2%;
+}
+.landmark.right {
+  right: 2%;
+}
+.landmark-emoji {
+  font-size: 104px;
+  line-height: 1;
+  filter: drop-shadow(0 10px 8px rgba(0, 0, 0, 0.35));
+}
+.landmark-shadow {
+  position: absolute;
+  bottom: -4px;
+  width: 112px;
+  height: 26px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.28);
+  filter: blur(3px);
+}
+.iso-deco {
+  position: absolute;
+  font-size: 34px;
+  z-index: 1;
+  filter: drop-shadow(0 4px 4px rgba(0, 0, 0, 0.3));
+  pointer-events: none;
+}
+.iso-deco.left0 {
+  left: 8%;
+  top: 9%;
+}
+.iso-deco.left1 {
+  left: 16%;
+  bottom: 18%;
+}
+.iso-deco.right0 {
+  right: 8%;
+  top: 9%;
+}
+.iso-deco.right1 {
+  right: 16%;
+  bottom: 18%;
+}
+.world-banner {
+  position: absolute;
+  left: 50%;
+  bottom: 16px;
+  transform: translateX(-50%);
+  z-index: 25;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 14px;
+  border-radius: 14px;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(4px);
+  color: #fff;
+  white-space: nowrap;
+  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.3);
+}
+.world-banner-icon {
+  font-size: 1.7rem;
+}
+.world-banner b {
+  display: block;
+}
+.world-banner small {
+  color: rgba(255, 255, 255, 0.75);
+}
+.path-hud {
+  position: sticky;
+  bottom: 0;
+  z-index: 40;
+  padding: 26px 14px 14px;
+  background: linear-gradient(180deg, rgba(30, 27, 24, 0), rgba(30, 27, 24, 0.94) 26%, #1e1b18);
+}
+.hud-top {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.hud-points {
+  font-size: 1.7rem;
+  font-weight: 900;
+  color: #fff;
+}
+.hud-chip {
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  padding: 2px 9px;
+  font-weight: 800;
+}
+.hud-stage {
+  color: #fff;
+  font-weight: 900;
+  padding: 4px 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+.hud-bar {
+  height: 12px;
+  margin: 8px 0 4px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.12);
+  overflow: hidden;
+}
+.hud-bar > div {
+  height: 100%;
+  border-radius: 8px;
+  background: linear-gradient(90deg, #f7c631, #ffdf6e);
+  transition: width 0.6s ease;
+}
+.hud-next {
+  color: var(--muted);
+}
+.hud-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 10px;
+}
+.hud-list {
+  width: 62px;
+  font-size: 1.4rem;
+}
+.hud-go {
+  flex: 1;
+}
+@media (max-width: 720px) {
+  .path-hud {
+    bottom: calc(58px + env(safe-area-inset-bottom));
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .token {
+    animation: none;
+  }
+}
+/* Path map fixes: keep the map's stacking inside it (never over the header),
+   a smaller token, the next stage's points above its tile, HUD flush with the tab bar. */
+.path-screen {
+  isolation: isolate;
+}
+.token {
+  bottom: 34px;
+}
+.token-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  font-size: 1.2rem;
+}
+.token-piece {
+  width: 50px;
+  height: 50px;
+}
+.stage-need {
+  top: -8px;
+}
+@media (max-width: 720px) {
+  .path-hud {
+    bottom: calc(66px + env(safe-area-inset-bottom));
+  }
+}
+@media (max-width: 720px) {
+  .path-hud {
+    padding: 18px 12px 10px;
+  }
+  .hud-points {
+    font-size: 1.4rem;
+  }
+  .hud-actions .btn.big {
+    padding: 11px 18px;
+    font-size: 1.05rem;
+  }
+  .hud-list {
+    width: 54px;
+  }
+}
+/* Fill any gap between the HUD and the phone tab bar. */
+.path-hud::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 100%;
+  height: 140px;
+  background: #1e1b18;
+}
+.path-hud {
+  background: linear-gradient(180deg, rgba(30, 27, 24, 0) 0, #1e1b18 20px);
+}
