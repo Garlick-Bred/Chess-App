@@ -18,6 +18,8 @@
   sideways down to 320 px wide, and open tabs reload themselves after a deploy.
 * Endgame School (curriculum with graduation and spaced check-ups), an
   endgame rating, and full cloves for drills at your level.
+* Streak shields (garlic braid), streak repair with a double bulb, and golden
+  cloves.
 
 ## Still worth building
 

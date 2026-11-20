@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { createNodeStore } from '../server/store-node.js';
-import { ensureSchema } from '../server/schema.js';
-import { recordAttempt, getTotals, getProgress, getLeaderboard, applyStartingLevels, ensureEndgameRating } from '../server/game.js';
+import { ensureSchema, SCHEMA_VERSION } from '../server/schema.js';
+import { recordAttempt, getTotals, getProgress, getLeaderboard, applyStartingLevels, ensureEndgameRating, applyShields } from '../server/game.js';
 import { hashPassword, verifyPassword } from '../server/auth.js';
 import { validFen } from '../server/tablebase.js';
 import { createApi } from '../server/api.js';
@@ -173,7 +173,7 @@ describe('endgame rating and Endgame School', () => {
     expect(u.eg_rating).toBeGreaterThan(1200);
     expect((await getProgress(store, user.id)).philidor.cleanStreak).toBe(3);
   });
-  it('re-rates everyone once when the rules change (schema v5, v6)', async () => {
+  it('re-rates everyone once when the rules change (schema v5+)', async () => {
     const { store, user } = await setup(1200);
     await store.run('UPDATE users SET eg_rating = 1500, eg_games = 9 WHERE id = ?', user.id);
     await store.run("UPDATE meta SET value = '4' WHERE key = 'schema_version'");
@@ -183,13 +183,74 @@ describe('endgame rating and Endgame School', () => {
     await store.run('UPDATE users SET eg_rating = 1500 WHERE id = ?', user.id);
     await ensureSchema(store); // already current: no second reset
     expect((await store.get('SELECT eg_rating FROM users WHERE id = ?', user.id)).eg_rating).toBe(1500);
-    expect((await store.get("SELECT value FROM meta WHERE key = 'schema_version'")).value).toBe('6');
+    expect((await store.get("SELECT value FROM meta WHERE key = 'schema_version'")).value).toBe(String(SCHEMA_VERSION));
+  });
+  it('credits cloves already earned beyond a full bulb to the braid (schema v7)', async () => {
+    const { store, user } = await setup(800);
+    await store.run('INSERT INTO days (user_id, day, cloves, bulb_done, bonus) VALUES (?,?,11.5,1,50)', user.id, '2026-11-18');
+    await store.run("UPDATE meta SET value = '6' WHERE key = 'schema_version'");
+    await ensureSchema(store);
+    const row = await store.get('SELECT shields, braid FROM users WHERE id = ?', user.id);
+    expect(row.shields).toBe(1);
+    expect(row.braid).toBeCloseTo(1.5);
   });
   it('shows endgame ratings on the family board', async () => {
     const { store, user } = await setup(1200);
     await recordAttempt(store, user, solve({ drillId: 'lucena', mateIn: null }));
     const lb = await getLeaderboard(store, '2026-11-19');
     expect(lb.players[0].egRating).toBeGreaterThan(1200);
+  });
+});
+
+describe('streak shields, repairs and golden cloves', () => {
+  const never = { rng: () => 0.99 };
+  it('extra cloves after the bulb weave a streak shield', async () => {
+    const { store, user } = await setup(800); // rook mate = a whole clove each
+    let r;
+    for (let i = 0; i < 10; i++) r = await recordAttempt(store, user, solve(), never);
+    expect(r.braid.shields).toBe(1);
+    expect(r.braid.earned).toBe(1);
+    expect(r.newAchievements.map((a) => a.id)).toContain('shield-1');
+    expect((await getTotals(store, user.id, '2026-11-19')).shields).toBe(1);
+  });
+  it('a shield covers a missed day on the next visit', async () => {
+    const { store, user } = await setup(800);
+    for (const day of ['2026-11-17', '2026-11-18']) {
+      await store.run('INSERT INTO days (user_id, day, cloves, bulb_done, bonus) VALUES (?,?,5,1,50)', user.id, day);
+    }
+    await store.run('UPDATE users SET shields = 1 WHERE id = ?', user.id);
+    expect((await getTotals(store, user.id, '2026-11-20')).streak).toBe(2);
+    expect(await applyShields(store, user.id, '2026-11-20')).toEqual(['2026-11-19']);
+    const t = await getTotals(store, user.id, '2026-11-20');
+    expect(t.streak).toBe(2);
+    expect(t.shields).toBe(0);
+    expect(t.shieldUsedOn).toBe('2026-11-19');
+    expect(await applyShields(store, user.id, '2026-11-20')).toEqual([]); // only once
+  });
+  it('a double bulb repairs a streak broken yesterday', async () => {
+    const { store, user } = await setup(800);
+    for (const day of ['2026-11-17', '2026-11-18']) {
+      await store.run('INSERT INTO days (user_id, day, cloves, bulb_done, bonus) VALUES (?,?,5,1,50)', user.id, day);
+    }
+    expect((await getTotals(store, user.id, '2026-11-20')).repair).toEqual({ streak: 2, cloves: 10 });
+    let r;
+    for (let i = 0; i < 10; i++) r = await recordAttempt(store, user, solve({ day: '2026-11-20' }), never);
+    expect(r.repaired).toEqual({ streak: 3 });
+    expect(r.newAchievements.map((a) => a.id)).toContain('repair-1');
+    expect((await getTotals(store, user.id, '2026-11-20')).streak).toBe(3);
+  });
+  it('golden cloves add bonus points on solves at your level, with a cap on dry spells', async () => {
+    const { store, user } = await setup(800);
+    const g = await recordAttempt(store, user, solve(), { rng: () => 0 });
+    expect(g.golden.points).toBeGreaterThanOrEqual(10);
+    expect(g.breakdown.some((b) => b.label.includes('Golden clove'))).toBe(true);
+    expect(g.newAchievements.map((a) => a.id)).toContain('golden-1');
+    // Never on a solve that needed "Show piece".
+    expect((await recordAttempt(store, user, solve({ hints: 1 }), { rng: () => 0 })).golden).toBe(null);
+    // At most 15 eligible solves without one.
+    let hits = 0;
+    for (let i = 0; i < 15; i++) if ((await recordAttempt(store, user, solve(), never)).golden) hits++;
+    expect(hits).toBe(1);
   });
 });
 

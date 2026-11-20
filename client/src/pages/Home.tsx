@@ -3,7 +3,8 @@ import { DRILLS, DRILL_BY_ID } from '@shared/drills.js';
 import { BULB_BONUS } from '@shared/scoring.js';
 import insights from '@shared/insights.json';
 import { drillFit, formatCloves } from '@shared/cloves.js';
-import { api, localDay } from '../api';
+import { api, localDay, type Me } from '../api';
+import { addDays } from '@shared/scoring.js';
 import { go, isDoneToday, useApp } from '../App';
 import GarlickBulb from '../components/GarlickBulb';
 import { Material, Stars, TierChip, LevelDots, fmtTime } from '../components/ui';
@@ -43,6 +44,43 @@ function recommendations(progress: Record<string, any>, chesscom: string | undef
   return out.slice(0, 3);
 }
 
+const shieldIcons = (n: number) => (n > 0 ? ` · ${'🛡️'.repeat(n)}` : '');
+
+/** A broken streak that a double bulb can still repair, or a shield that just saved one. */
+function StreakNotice({ me }: { me: Me }) {
+  const t = me.totals;
+  if (t.repair) {
+    return (
+      <section className="streak-notice repair">
+        <span aria-hidden="true">💨</span>
+        <span className="grow">
+          Your <b>🔥 {t.repair.streak}-day streak</b> broke yesterday. Fill a <b>double bulb</b> today to repair it:{' '}
+          <b>
+            {formatCloves(Math.min(t.repair.cloves, me.today.cloves))}/{t.repair.cloves}
+          </b>{' '}
+          cloves.
+        </span>
+        <button className="btn primary" onClick={() => go('/play/school')}>
+          Repair ▸
+        </button>
+      </section>
+    );
+  }
+  if (t.shieldUsedOn) {
+    const when = t.shieldUsedOn === addDays(localDay(), -1) ? 'yesterday' : t.shieldUsedOn;
+    return (
+      <section className="streak-notice used">
+        <span aria-hidden="true">🛡️</span>
+        <span className="grow">
+          A streak shield covered {when}, so your <b>🔥 {t.streak}-day streak</b> is safe.{' '}
+          {t.shields ? `${t.shields} shield${t.shields === 1 ? '' : 's'} left.` : 'Weave a new one with cloves beyond a full bulb.'}
+        </span>
+      </section>
+    );
+  }
+  return null;
+}
+
 export default function HomePage() {
   const { me } = useApp();
   const [recent, setRecent] = useState<any[]>([]);
@@ -80,7 +118,7 @@ export default function HomePage() {
               {me.totals.streak > 0 ? (
                 <>
                   {' '}
-                  and your <b className="flame">🔥 {me.totals.streak}-day streak</b> is safe
+                  and your <b className="flame">🔥 {me.totals.streak}-day streak</b><span className="shields">{shieldIcons(me.totals.shields)}</span> is safe
                 </>
               ) : null}
               . A fresh bulb starts at midnight.
@@ -92,7 +130,7 @@ export default function HomePage() {
             {me.totals.streak > 0 ? (
               <>
                 {' '}
-                and keep your <b className="flame">🔥 {me.totals.streak}-day streak</b> alive
+                and keep your <b className="flame">🔥 {me.totals.streak}-day streak</b><span className="shields">{shieldIcons(me.totals.shields)}</span> alive
               </>
             ) : null}
             .
@@ -130,6 +168,9 @@ export default function HomePage() {
           </div>
         </div>
       </section>
+
+      <StreakNotice me={me} />
+
 
       <SchoolSummary me={me} />
 

@@ -3,8 +3,9 @@
 // `check` receives a context built by the server
 // after each attempt:
 //   ctx.attempt  - the attempt just finished (drillId, success, durationMs, efficiency, perfect, level, takebacks)
-//   ctx.totals   - { solves, perfects, points, speedMax, bulbs, streak,
+//   ctx.totals   - { solves, perfects, points, speedMax, bulbs, streak, golden,
 //                    solvesByDrill: {id:n}, levelByDrill: {id:n}, drillCount }
+//   ctx.events   - { golden, shieldEarned, repaired } for this attempt
 
 const solved = (ctx, id) => (ctx.totals.solvesByDrill[id] ?? 0);
 const lvl = (ctx, id) => (ctx.totals.levelByDrill[id] ?? 1);
@@ -34,6 +35,10 @@ export const ACHIEVEMENTS = [
   { id: 'streak-3', name: 'Garlick Streak: 3', icon: '🔥', desc: 'Complete the bulb 3 days in a row.', check: (c) => c.totals.streak >= 3 },
   { id: 'streak-7', name: 'Garlick Streak: 7', icon: '🔥', desc: 'Complete the bulb 7 days in a row.', check: (c) => c.totals.streak >= 7 },
   { id: 'streak-30', name: 'Garlick Streak: 30', icon: '🌋', desc: 'Complete the bulb 30 days in a row.', check: (c) => c.totals.streak >= 30 },
+  { id: 'golden-1', name: 'Golden Touch', icon: '✨', desc: 'Find your first golden clove.', check: (c) => (c.totals.golden ?? 0) >= 1 },
+  { id: 'golden-10', name: 'Golden Hoard', icon: '👑', desc: 'Collect 10 golden cloves.', check: (c) => (c.totals.golden ?? 0) >= 10 },
+  { id: 'shield-1', name: 'Braided Shield', icon: '🛡️', desc: 'Weave a streak shield from extra cloves.', check: (c) => !!c.events?.shieldEarned },
+  { id: 'repair-1', name: 'Second Wind', icon: '💨', desc: 'Repair a broken streak with a double bulb.', check: (c) => !!c.events?.repaired },
   { id: 'cloves-100', name: 'Clove Collector', icon: '🧺', desc: 'Solve 100 drills.', check: (c) => c.totals.solves >= 100 },
   { id: 'points-1k', name: 'Four Digits', icon: '💯', desc: 'Earn 1,000 points.', check: (c) => c.totals.points >= 1000 },
   { id: 'points-10k', name: 'Garlick Royalty', icon: '🏰', desc: 'Earn 10,000 points.', check: (c) => c.totals.points >= 10000 },

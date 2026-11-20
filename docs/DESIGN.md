@@ -177,6 +177,23 @@ Seconds-per-move drops with level (e.g. rook mate: 4.5 → 2.5 s).
   browser only; extra solves after it still earn points.
 * Completing the bulb on consecutive days builds a 🔥 streak (badges at 3, 7
   and 30 days).
+* **Garlic braid and streak shields** (`shared/streak.js`): once the bulb is
+  full, every further clove weaves into a braid; 5 extra cloves make a 🛡️
+  streak shield (hold up to 2). A shield is used automatically on your next
+  visit for a day you missed (only if you have enough to cover every missed
+  day; otherwise you keep them). A shielded day keeps the streak unbroken but
+  doesn't add to it. Cloves already earned beyond a full bulb before this
+  feature were credited to the braid.
+* **Repair:** missed yesterday with no shield? Fill a double bulb (10 cloves)
+  today and the streak carries on. Research (Silverman & Barasch 2023) found
+  that broken streaks make people back away from a habit and that a way to
+  repair them softens this; Duolingo's freezes and wagers lifted retention.
+* **Golden cloves:** about 1 in 8 solves at your level (in your School
+  rotation, core or stretch, no "Show piece", not a lesson replay) turns
+  golden for bonus points of half the drill's base (at least 10), with a
+  sparkle and chime. At most 15 such solves go by without one. They are a
+  small variable reward on top of the predictable ones and never touch your
+  rating, levels or School progress.
 * The day resets at **your local midnight**.
 
 ## 7. Hints and lessons (no LLM)

@@ -75,6 +75,16 @@ export interface Totals {
   perfects: number;
   bulbs: number;
   streak: number;
+  /** Streak shields held, and the braid (cloves beyond the full bulb) weaving the next one. */
+  shields: number;
+  maxShields: number;
+  braid: number;
+  braidSize: number;
+  /** Yesterday was missed with no shield: a double bulb today repairs the streak. */
+  repair: { streak: number; cloves: number } | null;
+  /** The latest day (in the last few) a shield covered, if any. */
+  shieldUsedOn: string | null;
+  golden: number;
   rank: Rank;
   solvesByDrill: Record<string, number>;
   levelByDrill: Record<string, number>;
@@ -125,6 +135,9 @@ export interface AttemptResult {
   lessonCloveCapped?: boolean;
   /** Why the solve filled less than a whole clove, if it did. */
   cloveNote?: string | null;
+  golden: { points: number; total: number } | null;
+  braid: { braid: number; shields: number; earned: number; size: number; max: number };
+  repaired: { streak: number } | null;
   rating: { rated: boolean; before: number; after: number; delta: number; puzzle: number };
   school: {
     atLevel: boolean;
@@ -138,5 +151,5 @@ export interface AttemptResult {
   progress: { level: number; qualifying: number; levelUp: boolean; needed: number; qualified: boolean };
   day: DayInfo & { bulbCompletedNow: boolean; bulbBonus: number };
   newAchievements: { id: string; name: string; icon: string; desc: string }[];
-  totals: { points: number; rank: Rank; streak: number };
+  totals: { points: number; rank: Rank; streak: number; shields: number };
 }

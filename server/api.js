@@ -14,6 +14,7 @@ import {
   getLeaderboard,
   applyStartingLevels,
   ensureEndgameRating,
+  applyShields,
   httpError,
 } from './game.js';
 import { RATING_SOURCES, validRating } from '../shared/cloves.js';
@@ -149,6 +150,7 @@ export function createApi({ store, env = {} }) {
 
     if (method === 'GET' && path === '/api/me') {
       const u = await needUser();
+      await applyShields(store, u.id, day);
       return json({
         user: publicUser(u),
         totals: await getTotals(store, u.id, day),

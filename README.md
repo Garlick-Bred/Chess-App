@@ -48,8 +48,12 @@ solve.
   at higher levels. Five cloves complete the bulb (+50 points): the stalks shoot
   up while it bounces, glows and sparkles, and you're asked whether to keep
   going or call it a day (with a wrap-up of the day's work). Completed bulbs
-  build your streak.
-* **26 badges**, a **family leaderboard** (weekly and all-time), **family
+  build your streak. Extra cloves weave a **garlic braid** into 🛡️ streak
+  shields that cover a missed day, and a double bulb repairs a streak broken
+  yesterday.
+* **Golden cloves:** about 1 in 8 solves at your level turns golden for bonus
+  points.
+* **30 badges**, a **family leaderboard** (weekly and all-time), **family
   records** (fastest pace per drill), and **stats** with pace trends and a
   30-day calendar.
 * **Family accounts** with username, password and chess rating (chess.com,

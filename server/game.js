@@ -3,8 +3,9 @@
 // Works against any store with the async get/all/run/batch interface
 // (local SQLite or Cloudflare D1).
 import { DRILLS, DRILL_BY_ID, MAX_LEVEL, parSeconds } from '../shared/drills.js';
-import { scoreAttempt, qualifiesForLevel, SOLVES_TO_LEVEL, BULB_CLOVES, BULB_BONUS, PB_BONUS_SHARE, bulbStreak, rankFor, masteryStars, addDays } from '../shared/scoring.js';
-import { cloveValue, cloveShortfall, startingLevel, LESSON_CLOVES_PER_DAY } from '../shared/cloves.js';
+import { scoreAttempt, qualifiesForLevel, SOLVES_TO_LEVEL, BULB_CLOVES, BULB_BONUS, PB_BONUS_SHARE, rankFor, masteryStars, addDays } from '../shared/scoring.js';
+import { cloveValue, cloveShortfall, startingLevel, drillFit, LESSON_CLOVES_PER_DAY } from '../shared/cloves.js';
+import { streakInfo, shieldDaysToUse, weaveBraid, rollGolden, goldenBonus, BRAID_SIZE, MAX_SHIELDS, REPAIR_CLOVES } from '../shared/streak.js';
 import { puzzleRating, solveScore, rateAttempt, startingEndgameRating } from '../shared/rating.js';
 import { buildCurriculum, atYourLevel, advanceSchool, countsForSchool, GRADUATE_AFTER } from '../shared/curriculum.js';
 import { ACHIEVEMENTS, newlyUnlocked } from '../shared/achievements.js';
@@ -79,7 +80,11 @@ export async function getTotals(store, userId, today) {
     userId,
   );
   const b = await store.get('SELECT COALESCE(SUM(bonus),0) bonus, COALESCE(SUM(bulb_done),0) bulbs FROM days WHERE user_id = ?', userId);
-  const doneDays = (await store.all('SELECT day FROM days WHERE user_id = ? AND bulb_done = 1', userId)).map((r) => r.day);
+  const { doneDays, protectedDays, shieldDays } = await streakDays(store, userId);
+  const u = (await store.get('SELECT shields, braid FROM users WHERE id = ?', userId)) ?? { shields: 0, braid: 0 };
+  const g = await store.get('SELECT COALESCE(SUM(golden),0) n FROM attempts WHERE user_id = ?', userId);
+  const streak = today ? streakInfo({ doneDays, protectedDays, today, shields: u.shields }) : { streak: 0, repairable: null };
+  const recentShield = today ? shieldDays.filter((d) => d >= addDays(today, -3)).sort().pop() ?? null : null;
   const progress = await getProgress(store, userId);
   const solvesByDrill = {};
   const levelByDrill = {};
@@ -94,12 +99,52 @@ export async function getTotals(store, userId, today) {
     perfects: a.perfects,
     speedMax: a.speed_max,
     bulbs: b.bulbs,
-    streak: today ? bulbStreak(doneDays, today) : 0,
+    streak: streak.streak,
+    // Streak protection (shared/streak.js)
+    shields: u.shields,
+    maxShields: MAX_SHIELDS,
+    braid: u.braid,
+    braidSize: BRAID_SIZE,
+    repair: streak.repairable ? { streak: streak.repairable.streak, cloves: REPAIR_CLOVES } : null,
+    shieldUsedOn: recentShield,
+    golden: g.n,
     solvesByDrill,
     levelByDrill,
     drillCount: DRILLS.length,
     rank: rankFor(points),
   };
+}
+
+/** Full-bulb days and days covered by a shield (protected = 1) or a repair (protected = 2). */
+async function streakDays(store, userId) {
+  const rows = await store.all('SELECT day, bulb_done, protected FROM days WHERE user_id = ? AND (bulb_done = 1 OR protected > 0)', userId);
+  return {
+    doneDays: rows.filter((r) => r.bulb_done).map((r) => r.day),
+    protectedDays: rows.filter((r) => r.protected > 0).map((r) => r.day),
+    shieldDays: rows.filter((r) => r.protected === 1).map((r) => r.day),
+  };
+}
+
+/**
+ * Use streak shields for days missed since the player's last active day, if
+ * they have enough to cover them all (otherwise the streak is gone and the
+ * shields are kept). Runs on each visit; returns the days it covered.
+ */
+export async function applyShields(store, userId, today) {
+  if (!DAY_RE.test(today ?? '')) return [];
+  const u = await store.get('SELECT shields FROM users WHERE id = ?', userId);
+  if (!u?.shields) return [];
+  const days = shieldDaysToUse({ ...(await streakDays(store, userId)), today, shields: u.shields });
+  if (!days.length) return [];
+  await store.batch([
+    ...days.map((d) => [
+      `INSERT INTO days (user_id, day, cloves, bulb_done, bonus, protected) VALUES (?,?,0,0,0,1)
+       ON CONFLICT(user_id, day) DO UPDATE SET protected = 1`,
+      [userId, d],
+    ]),
+    ['UPDATE users SET shields = MAX(0, shields - ?) WHERE id = ?', [days.length, userId]],
+  ]);
+  return days;
 }
 
 export async function getDay(store, userId, day) {
@@ -151,11 +196,12 @@ export async function ensureEndgameRating(store, user) {
  * Validate, score and store an attempt. Returns everything the result
  * screen needs (points breakdown, level change, clove progress, achievements).
  */
-export async function recordAttempt(store, user, body) {
+export async function recordAttempt(store, user, body, opts = {}) {
   const drill = DRILL_BY_ID[body.drillId];
   if (!drill) throw httpError(400, 'Unknown drill');
   const day = DAY_RE.test(body.day ?? '') ? body.day : new Date().toISOString().slice(0, 10);
   user = await ensureEndgameRating(store, user);
+  await applyShields(store, user.id, day);
   const progressRow = (await store.get(
     'SELECT level, qualifying, clean_streak, status, review_due, review_step FROM progress WHERE user_id = ? AND drill_id = ?',
     user.id,
@@ -268,14 +314,37 @@ export async function recordAttempt(store, user, body) {
   };
   const cloves = dayRow.cloves + cloveGain;
   const bulbCompletedNow = !dayRow.bulb_done && cloves >= BULB_CLOVES - EPS;
+
+  // Streak protection: cloves beyond the full bulb weave the braid (a shield
+  // every BRAID_SIZE), and a double bulb repairs a streak broken yesterday.
+  const urow = (await store.get('SELECT shields, braid, golden_since FROM users WHERE id = ?', user.id)) ?? { shields: 0, braid: 0, golden_since: 0 };
+  const woven = weaveBraid({ braid: urow.braid, shields: urow.shields, cloveBefore: dayRow.cloves, cloveAfter: cloves });
+  let repaired = null;
+  if (cloves >= REPAIR_CLOVES - EPS && dayRow.cloves < REPAIR_CLOVES - EPS) {
+    const info = streakInfo({ ...(await streakDays(store, user.id)), today: day, shields: 0 });
+    if (info.repairable) repaired = { streak: info.repairable.streak + 1, day: addDays(day, -1) };
+  }
+
+  // Golden clove: an occasional bonus on solves at your level (never on a
+  // lesson replay or a solve that needed "Show piece").
+  const fit = drillFit(drill, egBefore);
+  const goldenEligible = success && !attempt.lessonReplay && attempt.hints === 0 && (atLevel || fit === 'core' || fit === 'stretch');
+  const golden = rollGolden({ eligible: goldenEligible, sinceLast: urow.golden_since ?? 0, rng: opts.rng });
+  let goldenPoints = 0;
+  if (golden) {
+    goldenPoints = goldenBonus(score.base);
+    breakdown.push({ label: '✨ Golden clove', points: goldenPoints });
+    points += goldenPoints;
+  }
+  const goldenSince = !goldenEligible ? (urow.golden_since ?? 0) : golden ? 0 : (urow.golden_since ?? 0) + 1;
   const already = (await store.all('SELECT achievement_id FROM achievements WHERE user_id = ?', user.id)).map((r) => r.achievement_id);
 
   const writes = [
     [
       `INSERT INTO attempts (user_id, drill_id, level, fen, success, reason, duration_ms, user_moves, waste_plies, efficiency, grades,
          hints, takebacks, only_moves, par_seconds, speed_factor, perfect, points, clove_gain, written_hints, lesson_replay,
-         mode, puzzle_rating, eg_before, eg_after, breakdown, day, created_at)
-       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+         mode, puzzle_rating, eg_before, eg_after, golden, breakdown, day, created_at)
+       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
       [
         user.id,
         drill.id,
@@ -302,6 +371,7 @@ export async function recordAttempt(store, user, body) {
         rated ? puzzleR : null,
         rated ? rating.before : null,
         rated ? rating.after : null,
+        golden ? 1 : 0,
         JSON.stringify(breakdown),
         day,
         Date.now(),
@@ -315,6 +385,14 @@ export async function recordAttempt(store, user, body) {
     ],
   ];
   if (rated) writes.push(['UPDATE users SET eg_rating = ?, eg_games = eg_games + 1 WHERE id = ?', [rating.after, user.id]]);
+  writes.push(['UPDATE users SET shields = ?, braid = ?, golden_since = ? WHERE id = ?', [woven.shields, woven.braid, goldenSince, user.id]]);
+  if (repaired) {
+    writes.push([
+      `INSERT INTO days (user_id, day, cloves, bulb_done, bonus, protected) VALUES (?,?,0,0,0,2)
+       ON CONFLICT(user_id, day) DO UPDATE SET protected = 2`,
+      [user.id, repaired.day],
+    ]);
+  }
   if (cloveGain > 0) {
     writes.push([
       `INSERT INTO days (user_id, day, cloves, bulb_done, bonus) VALUES (?,?,?,?,?)
@@ -328,6 +406,7 @@ export async function recordAttempt(store, user, body) {
   const ctx = {
     attempt: { drillId: drill.id, success, durationMs: attempt.durationMs, efficiency: score.efficiency, perfect: score.perfect, level, takebacks: attempt.takebacks },
     totals,
+    events: { golden, shieldEarned: woven.earned > 0, repaired: !!repaired },
   };
   const unlocked = newlyUnlocked(ctx, already);
   const now = Date.now();
@@ -343,6 +422,9 @@ export async function recordAttempt(store, user, body) {
     personalBest: pb,
     cloveGain,
     cloveNote,
+    golden: golden ? { points: goldenPoints, total: totals.golden } : null,
+    braid: { braid: woven.braid, shields: woven.shields, earned: woven.earned, size: BRAID_SIZE, max: MAX_SHIELDS },
+    repaired: repaired ? { streak: repaired.streak } : null,
     lessonReplay: attempt.lessonReplay,
     lessonCloveCapped,
     rating: { rated, before: Math.round(rating.before), after: Math.round(rating.after), delta: rating.delta, puzzle: puzzleR },
@@ -358,7 +440,7 @@ export async function recordAttempt(store, user, body) {
     progress: { level: newLevel, qualifying, levelUp, needed: SOLVES_TO_LEVEL, qualified: qualifies },
     day: { ...(await getDay(store, user.id, day)), bulbCompletedNow, bulbBonus: bulbCompletedNow ? BULB_BONUS : 0 },
     newAchievements: unlocked.map((id) => publicAchievement(ACHIEVEMENTS.find((a) => a.id === id))),
-    totals: { points: totals.points, rank: totals.rank, streak: totals.streak },
+    totals: { points: totals.points, rank: totals.rank, streak: totals.streak, shields: totals.shields },
   };
 }
 
@@ -387,7 +469,7 @@ export async function getStats(store, userId, today) {
     userId,
   );
   const from = addDays(today, -29);
-  const days = await store.all('SELECT day, cloves, bulb_done FROM days WHERE user_id = ? AND day >= ? ORDER BY day', userId, from);
+  const days = await store.all('SELECT day, cloves, bulb_done, protected FROM days WHERE user_id = ? AND day >= ? ORDER BY day', userId, from);
   const ratingRows = await store.all(
     'SELECT day, eg_after FROM attempts WHERE user_id = ? AND eg_after IS NOT NULL ORDER BY id DESC LIMIT 200',
     userId,

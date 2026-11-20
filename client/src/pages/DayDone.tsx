@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { DRILL_BY_ID } from '@shared/drills.js';
 import { api, localDay } from '../api';
+import { formatCloves } from '@shared/cloves.js';
 import { go, markDoneToday, useApp } from '../App';
 import GarlickBulb from '../components/GarlickBulb';
 
@@ -61,6 +62,12 @@ export default function DayDonePage() {
           ) : null}
           . A fresh bulb starts in <b>{countdown}</b>.
         </p>
+        {full && (
+          <p className="small muted">
+            🛡️ {me.totals.shields}/{me.totals.maxShields} streak shields
+            {me.totals.shields < me.totals.maxShields ? ` · braid ${formatCloves(me.totals.braid)}/${me.totals.braidSize} toward the next` : ''}
+          </p>
+        )}
 
         <div className="tiles day-tiles">
           <div className="card tile">

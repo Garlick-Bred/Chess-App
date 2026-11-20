@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import type { AttemptResult } from '../api';
 import { sfx } from '../sound';
 import GarlickBulb from './GarlickBulb';
+import GoldenClove from './GoldenClove';
 import { fmtTime, AchIcon } from './ui';
 import { formatCloves } from '@shared/cloves.js';
 
@@ -9,6 +10,36 @@ function niceDay(day: string | null): string {
   if (!day) return '';
   const [y, m, d] = day.split('-').map(Number);
   return new Date(y, m - 1, d).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
+}
+
+/** Garlic braid progress once the bulb is full, a new shield, or a repaired streak. */
+function BraidNote({ result, bulbFull }: { result: AttemptResult; bulbFull: boolean }) {
+  const b = result.braid;
+  if (result.repaired) {
+    return (
+      <div className="school-note pass">
+        💨 <b>Streak repaired!</b> Your double bulb saved it: 🔥 {result.repaired.streak} days and counting.
+      </div>
+    );
+  }
+  if (b?.earned) {
+    return (
+      <div className="school-note grad shield-note">
+        🛡️ <b>Streak shield woven!</b> You hold {b.shields} of {b.max}. It's used automatically if you miss a day.
+      </div>
+    );
+  }
+  if (!bulbFull || !b || result.cloveGain <= 0 || result.day.bulbCompletedNow) return null;
+  return (
+    <div className="braid-note">
+      <span className="braid-bar" aria-hidden="true">
+        <i style={{ width: `${Math.min(100, (b.braid / b.size) * 100)}%` }} />
+      </span>
+      {b.shields >= b.max
+        ? `🛡️ ${b.shields}/${b.max} shields held: your braid is full.`
+        : `Braid ${formatCloves(b.braid)}/${b.size} toward a streak shield${b.shields ? ` · 🛡️ ${b.shields} held` : ''}`}
+    </div>
+  );
 }
 
 /** Endgame rating change and Endgame School progress for this attempt. */
@@ -117,6 +148,14 @@ export default function ResultModal({ drill, level, outcome, result, submitError
     const t = setTimeout(() => choiceRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 1600);
     return () => clearTimeout(t);
   }, [askDone]);
+  useEffect(() => {
+    if (!result) return;
+    const t = setTimeout(() => {
+      if (result.golden) sfx.golden();
+      if (result.braid?.earned || result.repaired) setTimeout(() => sfx.shield(), result.golden ? 500 : 0);
+    }, 1300);
+    return () => clearTimeout(t);
+  }, [result]);
   const cloves = result?.day.cloves ?? prevCloves;
   const bulbFull = cloves >= 5 - 1e-9;
   const gotClove = ok && result && cloves > prevCloves && prevCloves < 5;
@@ -146,7 +185,10 @@ export default function ResultModal({ drill, level, outcome, result, submitError
               {result?.day.bulbCompletedNow ? (
                 <span className="bulb-complete-text">Bulb complete! +{result.day.bulbBonus}</span>
               ) : bulbFull ? (
-                <span>Today's bulb is full - keep going for points</span>
+                <span>
+                  {result && result.cloveGain > 0 && <b className="clove-gain">+{formatCloves(result.cloveGain)} clove · </b>}
+                  Bulb full: extra cloves weave your braid
+                </span>
               ) : (
                 <span>
                   {result && result.cloveGain > 0 && <b className="clove-gain">+{formatCloves(result.cloveGain)} clove · </b>}
@@ -155,6 +197,19 @@ export default function ResultModal({ drill, level, outcome, result, submitError
               )}
             </div>
             {result?.cloveNote && <div className="small muted clove-note">{formatCloves(result.cloveGain)} clove: {result.cloveNote}</div>}
+            {result && <BraidNote result={result} bulbFull={bulbFull} />}
+          </div>
+        )}
+
+        {result?.golden && (
+          <div className="golden-banner" role="status">
+            <GoldenClove size={40} />
+            <div>
+              <b>Golden clove!</b>
+              <small>
+                +{result.golden.points} bonus points · {result.golden.total} found so far
+              </small>
+            </div>
           </div>
         )}
 
@@ -258,7 +313,7 @@ export default function ResultModal({ drill, level, outcome, result, submitError
                   ✓ Done for today
                 </button>
               </div>
-              <small className="muted">Extra solves still earn points for the family board.</small>
+              <small className="muted">Extra cloves weave your garlic braid: 5 make a streak shield.</small>
             </div>
           ) : (
             <button className={`btn ${ok ? 'primary big' : ''}`} onClick={onNext} autoFocus={ok}>

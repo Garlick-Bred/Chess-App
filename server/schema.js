@@ -13,6 +13,9 @@ export const SCHEMA = [
     rating_source TEXT,
     eg_rating     REAL,
     eg_games      INTEGER NOT NULL DEFAULT 0,
+    shields       INTEGER NOT NULL DEFAULT 0,
+    braid         REAL NOT NULL DEFAULT 0,
+    golden_since  INTEGER NOT NULL DEFAULT 0,
     created_at    INTEGER NOT NULL
   )`,
   `CREATE TABLE IF NOT EXISTS sessions (
@@ -48,6 +51,7 @@ export const SCHEMA = [
     puzzle_rating INTEGER,
     eg_before    REAL,
     eg_after     REAL,
+    golden       INTEGER NOT NULL DEFAULT 0,
     breakdown    TEXT NOT NULL DEFAULT '[]',
     day          TEXT NOT NULL,
     created_at   INTEGER NOT NULL
@@ -71,6 +75,7 @@ export const SCHEMA = [
     cloves    REAL NOT NULL DEFAULT 0,
     bulb_done INTEGER NOT NULL DEFAULT 0,
     bonus     INTEGER NOT NULL DEFAULT 0,
+    protected INTEGER NOT NULL DEFAULT 0,
     PRIMARY KEY (user_id, day)
   )`,
   `CREATE TABLE IF NOT EXISTS achievements (
@@ -96,7 +101,7 @@ export const SCHEMA = [
 ];
 
 /** Bump when SCHEMA or ADDED_COLUMNS change, so existing databases migrate. */
-export const SCHEMA_VERSION = 6;
+export const SCHEMA_VERSION = 7;
 
 // Columns added after the first release; added to older databases on start.
 export const ADDED_COLUMNS = [
@@ -116,6 +121,12 @@ export const ADDED_COLUMNS = [
   ['progress', 'status', 'TEXT'],
   ['progress', 'review_due', 'TEXT'],
   ['progress', 'review_step', 'INTEGER NOT NULL DEFAULT 0'],
+  // v7: streak shields and golden cloves
+  ['users', 'shields', 'INTEGER NOT NULL DEFAULT 0'],
+  ['users', 'braid', 'REAL NOT NULL DEFAULT 0'],
+  ['users', 'golden_since', 'INTEGER NOT NULL DEFAULT 0'],
+  ['attempts', 'golden', 'INTEGER NOT NULL DEFAULT 0'],
+  ['days', 'protected', 'INTEGER NOT NULL DEFAULT 0'],
 ];
 
 /**
@@ -129,6 +140,13 @@ export const DATA_MIGRATIONS = {
   // v6: new baseline drill ratings (queen vs pawn 1450, queen vs rook and
   // bishop + knight 2000), so ratings are rebuilt against them.
   6: ['UPDATE users SET eg_rating = NULL, eg_games = 0'],
+  // v7: credit cloves already earned beyond a full bulb to the braid, and turn
+  // every 5 into a streak shield (up to 2).
+  7: [
+    'UPDATE users SET braid = (SELECT COALESCE(SUM(MAX(cloves - 5, 0)), 0) FROM days WHERE days.user_id = users.id)',
+    'UPDATE users SET shields = MIN(2, CAST(braid / 5 AS INTEGER))',
+    'UPDATE users SET braid = MIN(5, braid - shields * 5)',
+  ],
 };
 
 /**

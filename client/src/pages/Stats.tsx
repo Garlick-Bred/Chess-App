@@ -34,6 +34,8 @@ export default function StatsPage() {
         <Tile label="Perfect solves" value={me.totals.perfects} />
         <Tile label="Full bulbs" value={me.totals.bulbs} />
         <Tile label="Bulb streak" value={`🔥 ${me.totals.streak}`} />
+        <Tile label="Streak shields" value={`🛡️ ${me.totals.shields}/${me.totals.maxShields}`} />
+        <Tile label="Golden cloves" value={`✨ ${me.totals.golden}`} />
       </div>
 
       <section className="card">
@@ -43,7 +45,11 @@ export default function StatsPage() {
             const c = dayMap.get(d)?.cloves ?? 0;
             return (
               <div key={d} className={`cal-day c${Math.min(5, Math.ceil(c - 1e-9))} ${dayMap.get(d)?.bulb_done ? 'full' : ''}`} title={`${d}: ${formatCloves(c)} clove${c === 1 ? '' : 's'}`}>
-                {dayMap.get(d)?.bulb_done ? <GarlickBulb filled={5} size={14} celebrate={false} /> : null}
+                {dayMap.get(d)?.bulb_done ? (
+                  <GarlickBulb filled={5} size={14} celebrate={false} />
+                ) : (dayMap.get(d) as any)?.protected ? (
+                  <span title="Covered by a streak shield or repair">🛡️</span>
+                ) : null}
               </div>
             );
           })}
